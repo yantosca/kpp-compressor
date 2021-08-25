@@ -1,0 +1,13 @@
+#include atoms
+
+#DEFVAR
+
+A     = IGNORE;
+B     = IGNORE;
+C     = IGNORE;
+D     = IGNORE;
+
+#EQUATIONS
+A + B = C : R(1);
+A + C = D : R(2);
+
