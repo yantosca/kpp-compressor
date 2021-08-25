@@ -78,46 +78,6 @@ SUBROUTINE KppDecomp( JVS, IER )
       
 END SUBROUTINE KppDecomp
 
-! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-SUBROUTINE cKppDecomp( cJVS, IER )
-! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-!        Sparse LU factorization for compressed mechanism
-! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  USE gckpp_Parameters
-  USE gckpp_JacobianSP
-
-      INTEGER  :: IER
-      REAL(kind=dp) :: cJVS(NONZERO), W(rNVAR), a
-      INTEGER  :: k, kk, j, jj
-
-      a = 0. ! mz_rs_20050606
-      IER = 0
-      DO k=1,cNVAR
-        ! mz_rs_20050606: don't check if real value == 0
-        ! IF ( JVS( LU_DIAG(k) ) .EQ. 0. ) THEN
-        IF ( ABS(cJVS(cLU_DIAG(k))) < TINY(a) ) THEN
-            IER = k
-            RETURN
-        END IF
-        DO kk = cLU_CROW(k), cLU_CROW(k+1)-1
-              W( cLU_ICOL(kk) ) = cJVS(JVS_MAP(kk))
-        END DO
-        DO kk = cLU_CROW(k), cLU_DIAG(k)-1
-            j = cLU_ICOL(kk)
-            a = -W(j) / cJVS( JVS_MAP(cLU_DIAG(j)) )
-            W(j) = -a
-            DO jj = cLU_DIAG(j)+1, cLU_CROW(j+1)-1
-               W( cLU_ICOL(jj) ) = W( cLU_ICOL(jj) ) + a*cJVS(JVS_MAP(jj))
-            END DO
-         END DO
-         DO kk = cLU_CROW(k), cLU_CROW(k+1)-1
-            cJVS(JVS_MAP(kk)) = W( cLU_ICOL(kk) )
-         END DO
-      END DO
-      
-END SUBROUTINE cKppDecomp
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SUBROUTINE KppDecompCmplx( JVS, IER )

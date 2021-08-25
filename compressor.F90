@@ -10,27 +10,23 @@ program main
   REAL(dp)               :: RCNTRL(20)
   REAL(dp)               :: RSTATE(20)
   REAL(dp)               :: T, TIN, TOUT, start, end
-  REAL :: sumtime
+  REAL :: full_sumtime, comp_sumtime
 
   ! COMPACTION
   INTEGER, ALLOCATABLE :: REMOVE(:)    ! Vector of species indexes to be removed from full mechanism
-!  INTEGER, ALLOCATABLE :: cLU_IROW(:)  ! Compacted ROW indexes
-!  INTEGER, ALLOCATABLE :: cLU_ICOL(:)  ! Compacted COL indexes
-!  INTEGER, ALLOCATABLE :: cLU_CROW(:)  ! Compacted compressed row vector
-!  INTEGER, ALLOCATABLE :: cLU_DIAG(:)  ! Compacted DIAG indexes
   INTEGER :: NRMV                      ! Number of species removed (size(REMOVE))
-!  INTEGER :: cNONZERO                  ! Number of non-zero entries in compacted Jacobian
-!  INTEGER :: rNVAR                     ! Reduced number of variable species (the name "cNVAR" is already taken by KPP)
   
   INTEGER :: idx, S
 
-  ALLOCATE(DO_SLV(NVAR+1))     ! "VAR"iable"L"ogical, used to control KppSolve()
-  ALLOCATE(DO_JVS(NONZERO)) ! Yes/No, compute term, used to control Jac_SP()
+  INTEGER, ALLOCATABLE :: tLU_IROW(:), tLU_ICOL(:) ! temporary, for display purposes
+
+  ALLOCATE(DO_SLV(NVAR+1))  ! Yes/no (1/0), Used to control KppSolve()
+  ALLOCATE(DO_JVS(LU_NONZERO)) ! Yes/No (1/0), compute term, used to control Jac_SP()
 
   ! Temporoary settings.
-  DO_SLV     = 1 ! Compute all in KppSolve()
-  DO_JVS = 1 ! Compute all in JacSP()
-  cNONZERO = 0 ! Initialize
+  DO_SLV   = 1 ! Compute all in KppSolve()
+  DO_JVS   = 1 ! Compute all in JacSP()
+  cNONZERO = 0 ! Initialize number of nonzero elements in reduced mechanism
 
   ! -------------------------------------------------------------------------- !
   ! 1. Run the full mechanism
@@ -49,7 +45,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(1) = ind_B ! Species B
+  REMOVE(:) = (/ind_D/) ! Species
 
   ! -- DO_SLV and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -72,24 +68,35 @@ program main
   ALLOCATE(cLU_CROW(rNVAR+1))
   ALLOCATE(cLU_DIAG(rNVAR+1))
 
+  ALLOCATE(tLU_IROW(LU_NONZERO))
+  ALLOCATE(tLU_ICOL(LU_NONZERO))
+  tLU_IROW = 0
+  tLU_ICOL = 0
+
   ! -- -- -- recompute LU_IROW
   ! -- -- -- recompute LU_ICOL
   DO S = 1,NRMV
   idx = 0
   DO i = 1,NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
-     ! Remove row & column elements of removed species
+     ! Remove row & column elements of deactivated species
      ! Populate cLU_IROW & cLU_ICOL
      IF (LU_IROW(i).ne.REMOVE(S).and.LU_ICOL(i).ne.REMOVE(S)) THEN
         idx=idx+1
         IF (LU_IROW(i).gt.S) THEN
            cLU_IROW(idx) = LU_IROW(i)-S
-           cLU_ICOL(idx) = LU_ICOL(i)-S
-           JVS_MAP(idx)  = i
-        ELSE
+           tLU_IROW(i)   = LU_IROW(i)
+        ELSE 
            cLU_IROW(idx) = LU_IROW(i)
-           cLU_ICOL(idx) = LU_ICOL(i)
-           JVS_MAP(idx)  = i
+           tLU_IROW(i)   = LU_IROW(i)
         ENDIF
+        IF (LU_ICOL(i).gt.S) THEN
+           cLU_ICOL(idx) = LU_ICOL(i)-S
+           tLU_ICOL(i)   = LU_ICOL(i)
+        ELSE
+           cLU_ICOL(idx) = LU_ICOL(i)
+           tLU_ICOL(i)   = LU_ICOL(i)
+        ENDIF
+        JVS_MAP(idx)  = i
      ENDIF
      ! Toggle DO_JVS()
      IF (LU_IROW(i).eq.REMOVE(S).or.LU_ICOL(i).eq.REMOVE(S)) THEN
@@ -101,16 +108,16 @@ program main
   cLU_CROW(1) = 1 ! 1st index = 1
   cLU_DIAG(1) = 1 ! 1st index = 1
 
-  ! -- -- -- recompute LU_CROW
+  ! -- -- -- compute cLU_CROW
   S = 2
   DO i = 2,cNONZERO
-     IF (cLU_IROW(i).ne.cLU_IROW(i-1).and.S.le.rNVAR) THEN
+     IF ((cLU_IROW(i).ne.cLU_IROW(i-1).and.S.le.rNVAR).or.(i.eq.cNONZERO.and.S.le.rNVAR)) THEN
         cLU_CROW(S) = i
         S=S+1
      ENDIF
   ENDDO
 
-  ! -- -- -- recompute LU_DIAG
+  ! -- -- -- compute cLU_DIAG
   S = 1
   DO i = 2,cNONZERO
      IF (cLU_IROW(i).eq.cLU_ICOL(i)) THEN
@@ -132,21 +139,26 @@ program main
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Full-mech sparse data: '
-  write(*,*) 'LU_IROW: ', LU_IROW
-  write(*,*) 'LU_ICOL: ', LU_ICOL
-  write(*,*) 'LU_CROW: ', LU_CROW
-  write(*,*) 'LU_DIAG: ', LU_DIAG
+  write(*,*) 'LU_IROW:  ', LU_IROW
+  write(*,*) 'LU_ICOL:  ', LU_ICOL
+  write(*,*) 'LU_CROW:  ', LU_CROW
+  write(*,*) 'LU_DIAG:  ', LU_DIAG
+  write(*,*) '---------------'
+  write(*,*) ' '
+  write(*,*) 'Reduced-mech, uncompacted sparse data: '
+  write(*,*) '-- removes species ' // SPC_NAMES(REMOVE(:))! // ' with index ', REMOVE(:)
+  write(*,*) 'tLU_IROW: ', tLU_IROW
+  write(*,*) 'tLU_ICOL: ', tLU_ICOL
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Compacted sparse data: '
-  write(*,*) '-- removes species ' // SPC_NAMES(REMOVE(:))! // ' with index ', REMOVE(:)
   write(*,*) 'cLU_IROW: ', cLU_IROW
   write(*,*) 'cLU_ICOL: ', cLU_ICOL
   write(*,*) 'cLU_CROW: ', cLU_CROW
   write(*,*) 'cLU_DIAG: ', cLU_DIAG
   write(*,*) '---------------'
   write(*,*) ' '
-  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in KppDecomp()'
+  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
   write(*,*) 'JVS_MAP: ', JVS_MAP
   write(*,*) ' '
   write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
@@ -161,12 +173,12 @@ program main
   ! - Should be pretty straight-forward
   ! - Will need to respond to new 'parameters' cNVAR, cNONZERO
   ! - the compacted mechanism will still process the full species vector, 
-  !   C(NVAR), not c(rNVAR)
+  !   C(NVAR), not c(rNVAR), only dC/dt of inactive species is zero
 
-  ! with DO_JVS() and DO_SLV set above, this will 'try' to run a reduced mech, but will
+  ! with DO_JVS and DO_SLV set above, this will 'try' to run a reduced mech, but will
   ! dump errors since it still runs the full mech. Goal is to make it properly run the 
   ! reduced mech.
-  ! call compactedmech()
+  call compactedmech()
 
   ! -------------------------------------------------------------------------- !
   ! 4. (optional) Calculate the error norm per Santillana et al. (2010) and
@@ -175,6 +187,9 @@ program main
   !        a reduction criterion. Requires a properly posed mechanism.
 
   ! -------------------------------------------------------------------------- !
+
+  ! 5. Report timing comparison
+  write(*,'(a,f4.1,a)') ' compact/full: ', 100.*comp_sumtime/full_sumtime, "%" 
 
 CONTAINS
 
@@ -194,7 +209,6 @@ CONTAINS
     ! Tolerances
     ATOL      = 1e-2_dp    
     RTOL      = 1e-2_dp
-    
     ! Set ENV
     T    = 0d0
     TIN  = T
@@ -205,37 +219,36 @@ CONTAINS
     write(*,*) 'Running the full mechanism'
     
     call cpu_time(start)
-    sumtime   = 0.
+    full_sumtime   = 0.
     ! Initialize
     call Initialize()
-    
     ! --- INTEGRATION & TIMING LOOP
     DO I=1,20
        DO N=1,1000
           ! Set C
           C(1:NVAR)   = 1e8
           VAR(1:NVAR) = C(1:NVAR)
-          
           ! Set RCONST
           R = 1.
-          !        R(2) = 1.
+          !R(2) = 1.
           call Update_RCONST()
-          
           ! Integrate
           CALL Integrate( TIN,    TOUT,    ICNTRL,      &
                RCNTRL, ISTATUS, RSTATE, IERR )
-          C(1:NVAR)       = VAR(:)
-          
+          C(1:NVAR)   = VAR(:)
        ENDDO
        call cpu_time(end)
-       sumtime = sumtime+end-start
+       full_sumtime = full_sumtime+end-start
     ENDDO
-    write(*,*) "Average integration time: ", sumtime/20.
+    write(*,*) "Average integration time: ", full_sumtime/20.
     !  write(*,*) ' '
     write(*,*) '---------------'
   end subroutine fullmech
 
   subroutine compactedmech()
+    
+    USE compact_Integrator
+
     IMPLICIT NONE
     ! Set OPTIONS
     IERR      = 0                 ! Success or failure flag
@@ -262,7 +275,7 @@ CONTAINS
     write(*,*) 'Running the reduced mechanism'
     
     call cpu_time(start)
-    sumtime   = 0.
+    comp_sumtime   = 0.
     ! Initialize
     call Initialize()
     
@@ -279,15 +292,15 @@ CONTAINS
           call Update_RCONST()
           
           ! Integrate
-          CALL Integrate( TIN,    TOUT,    ICNTRL,      &
+          CALL cIntegrate( TIN,    TOUT,    ICNTRL,      &
                RCNTRL, ISTATUS, RSTATE, IERR )
           C(1:NVAR)       = VAR(:)
           
        ENDDO
        call cpu_time(end)
-       sumtime = sumtime+end-start
+       comp_sumtime = comp_sumtime+end-start
     ENDDO
-    write(*,*) "Average integration time: ", sumtime/20.
+    write(*,*) "Average integration time: ", comp_sumtime/20.
     write(*,*) '---------------'
   end subroutine compactedmech
 
