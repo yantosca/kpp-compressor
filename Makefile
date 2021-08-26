@@ -58,8 +58,8 @@ GENOBJ = gckpp_Precision.o    \
 	 gckpp_Parameters.o       \
 	 gckpp_Global.o     
 
-FUNSRC = gckpp_Function.F90 
-FUNOBJ = gckpp_Function.o 
+FUNSRC = gckpp_Function.F90
+FUNOBJ = gckpp_Function.o
 
 JACSRC = gckpp_JacobianSP.F90  gckpp_Jacobian.F90
 JACOBJ = gckpp_JacobianSP.o    gckpp_Jacobian.o
@@ -86,7 +86,7 @@ MAINOBJ = compressor.o     gckpp_Initialize.o     gckpp_Integrator.o   gckpp_Mod
 # User: modify the line below to include only the
 #       objects needed by your application
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-ALLOBJ = $(GENOBJ) $(FUNOBJ) $(JACOBJ) $(HESOBJ) $(STMOBJ) \
+ALLOBJ = $(GENOBJ) $(JACOBJ) $(FUNOBJ)  $(HESOBJ) $(STMOBJ) \
 	 $(UTLOBJ) $(LAOBJ) $(MODOBJ) $(INIOBJ)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -108,7 +108,7 @@ mex:    $(ALLOBJ)
 	$(MEX) FC#$(FC) -fortran -O gckpp_mex_Hessian.F90 $(ALLOBJ)
 
 clean:
-	rm -f gckpp*.o gckpp*.mod compressor.o \
+	rm -f *.o *.mod compressor.o \
 	gckpp*.dat gckpp.exe gckpp*.mexglx \
 	gckpp.map
 
@@ -135,7 +135,7 @@ gckpp_Global.o: gckpp_Global.F90 \
 gckpp_Initialize.o: gckpp_Initialize.F90  $(GENOBJ) 
 	$(FC) $(FOPT) -c $<
 
-gckpp_Function.o: gckpp_Function.F90  $(GENOBJ) 
+gckpp_Function.o: gckpp_Function.F90 $(GENOBJ) 
 	$(FC) $(FOPT) -c $<
 
 gckpp_Stochastic.o: gckpp_Stochastic.F90  $(GENOBJ) 

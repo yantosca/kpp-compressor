@@ -467,7 +467,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !      and its coefficients ros_{A,C,M,E,Alpha,Gamma}
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   USE gckpp_JacobianSP, ONLY : cNONZERO
+   USE gckpp_JacobianSP, ONLY : cNONZERO, rNVAR
 
   IMPLICIT NONE
 
@@ -487,15 +487,15 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !~~~> Output: Error indicator
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables
-   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N)
-   REAL(kind=dp) :: K(N*ros_S), dFdT(N)
+   REAL(kind=dp) :: Ynew(N), Ysub(rNVAR), Fcn0(N), Fcn(N)
+   REAL(kind=dp) :: K(rNVAR*ros_S), dFdT(N)
 #ifdef FULL_ALGEBRA    
    REAL(kind=dp) :: Jac0(N,N), Ghimj(N,N)
 #else
    REAL(kind=dp) :: Jac0(LU_NONZERO), Ghimj(cNONZERO)
 #endif
    REAL(kind=dp) :: H, Hnew, HC, HG, Fac, Tau
-   REAL(kind=dp) :: Err, Yerr(N)
+   REAL(kind=dp) :: Err, Yerr(N), Yerrsub(rNVAR)
    INTEGER :: Pivot(N), Direction, ioffset, j, istage
    LOGICAL :: RejectLastH, RejectMoreH, Singular
 !~~~>  Local parameters
@@ -559,6 +559,7 @@ UntilAccepted: DO
 
    CALL ros_PrepareMatrix(H,Direction,ros_Gamma(1), &
           Jac0,Ghimj,Pivot,Singular)
+
    IF (Singular) THEN ! More than 5 consecutive failed decompositions
        CALL ros_ErrorMsg(-8,T,H,IERR)
        RETURN
@@ -568,7 +569,7 @@ UntilAccepted: DO
 Stage: DO istage = 1, ros_S
 
       ! Current istage offset. Current istage vector is K(ioffset+1:ioffset+N)
-       ioffset = N*(istage-1)
+       ioffset = rNVAR*(istage-1)
 
       ! For the 1st istage the function has been computed previously
        IF ( istage == 1 ) THEN
@@ -579,22 +580,24 @@ Stage: DO istage = 1, ros_S
          !slim: CALL WCOPY(N,Y,1,Ynew,1)
 	 Ynew(1:N) = Y(1:N)
          DO j = 1, istage-1
-           CALL WAXPY(N,ros_A((istage-1)*(istage-2)/2+j), &
-            K(N*(j-1)+1),1,Ynew,1)
+            Ysub = Ynew(SPC_MAP)
+            CALL WAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
+                 K(rNVAR*(j-1)+1),1,Ysub,1)
+            Ynew(SPC_MAP) = Ysub
          END DO
          Tau = T + ros_Alpha(istage)*Direction*H
          CALL FunTemplate(Tau,Ynew,Fcn)
          ISTATUS(Nfun) = ISTATUS(Nfun) + 1
        END IF ! if istage == 1 elseif ros_NewF(istage)
        !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
-       K(ioffset+1:ioffset+N) = Fcn(1:N)
+       K(ioffset+1:ioffset+rNVAR) = Fcn(SPC_MAP)
        DO j = 1, istage-1
          HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
-         CALL WAXPY(N,HC,K(N*(j-1)+1),1,K(ioffset+1),1)
+         CALL WAXPY(rNVAR,HC,K(rNVAR*(j-1)+1),1,K(ioffset+1),1)
        END DO
        IF ((.NOT. Autonomous).AND.(ros_Gamma(istage).NE.ZERO)) THEN
          HG = Direction*H*ros_Gamma(istage)
-         CALL WAXPY(N,HG,dFdT,1,K(ioffset+1),1)
+         CALL WAXPY(rNVAR,HG,dFdT,1,K(ioffset+1),1)
        END IF
        CALL ros_Solve(Ghimj, Pivot, K(ioffset+1))
 
@@ -604,16 +607,20 @@ Stage: DO istage = 1, ros_S
 !~~~>  Compute the new solution
    !slim: CALL WCOPY(N,Y,1,Ynew,1)
    Ynew(1:N) = Y(1:N)
+   Ysub = Ynew(SPC_MAP)
    DO j=1,ros_S
-         CALL WAXPY(N,ros_M(j),K(N*(j-1)+1),1,Ynew,1)
+         CALL WAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ysub,1)
    END DO
+   Ynew(SPC_MAP) = Ysub
 
 !~~~>  Compute the error estimation
    !slim: CALL WSCAL(N,ZERO,Yerr,1)
    Yerr(1:N) = ZERO
+   Yerrsub = Yerr(SPC_MAP)
    DO j=1,ros_S
-        CALL WAXPY(N,ros_E(j),K(N*(j-1)+1),1,Yerr,1)
+        CALL WAXPY(rNVAR,ros_E(j),K(rNVAR*(j-1)+1),1,Yerrsub,1)
    END DO
+   Yerr(SPC_MAP) = Yerrsub
    Err = ros_ErrorNorm ( Y, Ynew, Yerr, AbsTol, RelTol, VectorTol )
 
 !~~~> New step size is bounded by FacMin <= Hnew/H <= FacMax

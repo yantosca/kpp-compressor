@@ -43,11 +43,13 @@ MODULE gckpp_JacobianSP
 
   INTEGER, ALLOCATABLE :: DO_JVS(:)
   INTEGER, ALLOCATABLE :: DO_SLV(:)
+  INTEGER, ALLOCATABLE :: DO_FUN(:)
   INTEGER, ALLOCATABLE :: cLU_IROW(:)  ! Compacted ROW indexes
   INTEGER, ALLOCATABLE :: cLU_ICOL(:)  ! Compacted COL indexes
   INTEGER, ALLOCATABLE :: cLU_CROW(:)  ! Compacted compressed row vector
   INTEGER, ALLOCATABLE :: cLU_DIAG(:)  ! Compacted DIAG indexes
   INTEGER, ALLOCATABLE :: JVS_MAP(:)   ! Map to JVS from compacted sparse data
+  INTEGER, ALLOCATABLE :: SPC_MAP(:)   ! Map function output
   INTEGER :: rNVAR     ! Compacted number of variable species
   INTEGER :: cNONZERO  ! Compacted number of non-zero elements in cJVS
 
