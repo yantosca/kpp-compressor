@@ -1,0 +1,66 @@
+  
+ Running the full mechanism
+ Average integration time:    4.70000014E-05
+ ---------------
+ D                 66666666.666666672     
+ B                 66666666.666666657     
+ C                 66666666.666666657     
+ A                 2.1071602204991655E-101
+  
+ Species Info:
+ ---------------
+ Species D has index:   1
+ Species B has index:   2
+ Species C has index:   3
+ Species A has index:   4
+ ---------------
+<<>>>  
+ Full-mech sparse data: 
+ LU_IROW:             1           1           1           2           2           3           3           3           4           4           4
+ LU_ICOL:             1           3           4           2           4           2           3           4           2           3           4
+ LU_CROW:             1           4           6           9          12
+ LU_DIAG:             1           4           7          11          12
+ ---------------
+  
+ Reduced-mech, uncompacted sparse data: 
+ -- removes species D              
+ rLU_IROW:            0           0           0           2           2           3           3           3           4           4           4
+ rLU_ICOL:            0           0           0           2           4           2           3           4           2           3           4
+ ---------------
+
+Q1: Are these being generated in a proper gnereic way? (work N species)  
+ Compacted sparse data: 
+ cLU_IROW:            1           1           2           2           2           3           3           3
+ cLU_ICOL:            1           3           1           2           3           1           2           3
+ cLU_CROW:            1           3           6           9
+ cLU_DIAG:            1           4           8           9
+ ... here, you have to feed this new into into KPP 
+     -- KPP as produced now, expects NVAR, LU_NONZERO sized data structures (set in gckpp_Parameters.F90)
+     -- new KPP needs to acceps rNVAR, cLU_NONZERO (this has to be fed in)(
+---------------
+  
+ JVS_MAP ensures that the right JVS values are indexed in the integration
+ JVS_MAP:            4           5           6           7           8           9          10          11
+  
+ SPC_MAP ensures that the right species values are indexed in the integration
+ SPC_MAP:            2           3           4
+  
+ DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip
+ DO_SLV:             0           1           1           1           1
+  
+ DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip
+ DO_FUN:             0           1           1           1
+  
+ DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip
+ DO_JVS:             0           0           0           1           1           1           1           1           1           1           1
+ <<>> 
+Q2: Are the compacted data being passed to reducted/compacted KPP correctly?
+Q3: Is the reduced/compacted KPP coded properly?
+ Running the reduced mechanism
+ Average integration time:    2.80000004E-05
+ ---------------
+ D                 1.0000000036274937E-015
+ B                                     NaN
+ C                                     NaN
+ A                                     NaN
+ compact/full: 59.6%
