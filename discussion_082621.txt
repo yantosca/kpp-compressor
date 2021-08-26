@@ -1,0 +1,32 @@
+External: Determine which species are inactivated (assume dC/dt ~= 0)
+
+1) Reduce which Fun() elements get calculated
+2) Reduce which Jac_SP() elements get calculated
+3) Reduce which KppSOlve() elements get calulated
+
+4) Cancel jacobian row/col - set them to zero
+4.1) Compact the sparse data to remove those zeros
+
+Questions:
+1) Where to start?
+-- First you all need to interpret and understand the "compressor"
+-- -- ... this will (start to) define the parts of the problem (See below).
+
+2) What is an ideal test mechanism?
+-- CH3 & OH (slow & fast)
+
+3) Who is doing the work?
+-- Daniel would prefer Haipeng lead (at least on manuscript writing).
+-- I don't want to lose the ability to get hours.
+
+4) What are the parts of the problem?
+
+Papers:
+1) KPP v3 - update to Sandu & Sander
+2) Application & performance of mech redux/compact in GC
+... if
+3) Generic ML interfaces that can be fed directly to KPP
+
+-------
+Scratch space:
+

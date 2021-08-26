@@ -541,7 +541,7 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    H = MIN(H,ABS(Tend-T))
 
 !~~~>   Compute the function at current time
-   CALL FunTemplate(T,Y,Fcn0)
+   CALL FunTemplate(T,Y,Fcn0) ! Reacts to DO_FUN()
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
 
 !~~~>  Compute the function derivative with respect to T
@@ -551,14 +551,14 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    END IF
 
 !~~~>   Compute the Jacobian at current time
-   CALL JacTemplate(T,Y,Jac0)
+   CALL JacTemplate(T,Y,Jac0) ! Reacts to DO_JVS()
    ISTATUS(Njac) = ISTATUS(Njac) + 1
 
 !~~~>  Repeat step calculation until current step accepted
 UntilAccepted: DO
 
    CALL ros_PrepareMatrix(H,Direction,ros_Gamma(1), &
-          Jac0,Ghimj,Pivot,Singular)
+          Jac0,Ghimj,Pivot,Singular) ! Note, not Ghimj(LU_NONZERO), above it's Ghimj(cNONZERO)
 
    IF (Singular) THEN ! More than 5 consecutive failed decompositions
        CALL ros_ErrorMsg(-8,T,H,IERR)
