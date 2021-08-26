@@ -55,51 +55,43 @@ SUBROUTINE Jac_SP ( V, F, RCT, JVS )
 
 ! Local variables
 ! B - Temporary array
-  REAL(kind=dp) :: B(4)
+  REAL(kind=dp) :: B(3)
 
-! B(1) = dA(1)/dV(2)
-  B(1) = RCT(1)*V(4)
-! B(2) = dA(1)/dV(4)
-  B(2) = RCT(1)*V(2)
-! B(3) = dA(2)/dV(3)
-  B(3) = RCT(2)*V(4)
-! B(4) = dA(2)/dV(4)
-  B(4) = RCT(2)*V(3)
+! B(1) = dA(1)/dV(1)
+  B(1) = RCT(1)
+! B(2) = dA(2)/dV(3)
+  B(2) = RCT(2)*V(4)
+! B(3) = dA(2)/dV(4)
+  B(3) = RCT(2)*V(3)
 
 ! Construct the Jacobian terms from B's
 IF (DO_JVS(1).eq.1) &
 ! JVS(1) = Jac_FULL(1,1)
-  JVS(1) = 0
+  JVS(1) = -B(1)
 IF (DO_JVS(2).eq.1) &
-! JVS(2) = Jac_FULL(1,3)
-  JVS(2) = B(3)
+! JVS(2) = Jac_FULL(2,2)
+  JVS(2) = 0
 IF (DO_JVS(3).eq.1) &
-! JVS(3) = Jac_FULL(1,4)
-  JVS(3) = B(4)
+! JVS(3) = Jac_FULL(2,3)
+  JVS(3) = B(2)
 IF (DO_JVS(4).eq.1) &
-! JVS(4) = Jac_FULL(2,2)
-  JVS(4) = -B(1)
+! JVS(4) = Jac_FULL(2,4)
+  JVS(4) = B(3)
 IF (DO_JVS(5).eq.1) &
-! JVS(5) = Jac_FULL(2,4)
-  JVS(5) = -B(2)
+! JVS(5) = Jac_FULL(3,1)
+  JVS(5) = B(1)
 IF (DO_JVS(6).eq.1) &
-! JVS(6) = Jac_FULL(3,2)
-  JVS(6) = B(1)
+! JVS(6) = Jac_FULL(3,3)
+  JVS(6) = -B(2)
 IF (DO_JVS(7).eq.1) &
-! JVS(7) = Jac_FULL(3,3)
+! JVS(7) = Jac_FULL(3,4)
   JVS(7) = -B(3)
 IF (DO_JVS(8).eq.1) &
-! JVS(8) = Jac_FULL(3,4)
-  JVS(8) = B(2)-B(4)
+! JVS(8) = Jac_FULL(4,3)
+  JVS(8) = -B(2)
 IF (DO_JVS(9).eq.1) &
-! JVS(9) = Jac_FULL(4,2)
-  JVS(9) = -B(1)
-IF (DO_JVS(10).eq.1) &
-! JVS(10) = Jac_FULL(4,3)
-  JVS(10) = -B(3)
-IF (DO_JVS(11).eq.1) &
-! JVS(11) = Jac_FULL(4,4)
-  JVS(11) = -B(2)-B(4)
+! JVS(9) = Jac_FULL(4,4)
+  JVS(9) = -B(3)
       
 END SUBROUTINE Jac_SP
 
@@ -126,10 +118,10 @@ SUBROUTINE Jac_SP_Vec ( JVS, UV, JUV )
 ! JUV - Jacobian times user vector
   REAL(kind=dp) :: JUV(NVAR)
 
-  JUV(1) = JVS(1)*UV(1)+JVS(2)*UV(3)+JVS(3)*UV(4)
-  JUV(2) = JVS(4)*UV(2)+JVS(5)*UV(4)
-  JUV(3) = JVS(6)*UV(2)+JVS(7)*UV(3)+JVS(8)*UV(4)
-  JUV(4) = JVS(9)*UV(2)+JVS(10)*UV(3)+JVS(11)*UV(4)
+  JUV(1) = JVS(1)*UV(1)
+  JUV(2) = JVS(2)*UV(2)+JVS(3)*UV(3)+JVS(4)*UV(4)
+  JUV(3) = JVS(5)*UV(1)+JVS(6)*UV(3)+JVS(7)*UV(4)
+  JUV(4) = JVS(8)*UV(3)+JVS(9)*UV(4)
       
 END SUBROUTINE Jac_SP_Vec
 
@@ -156,10 +148,10 @@ SUBROUTINE JacTR_SP_Vec ( JVS, UV, JTUV )
 ! JTUV - Jacobian transposed times user vector
   REAL(kind=dp) :: JTUV(NVAR)
 
-  JTUV(1) = JVS(1)*UV(1)
-  JTUV(2) = JVS(4)*UV(2)+JVS(6)*UV(3)+JVS(9)*UV(4)
-  JTUV(3) = JVS(2)*UV(1)+JVS(7)*UV(3)+JVS(10)*UV(4)
-  JTUV(4) = JVS(3)*UV(1)+JVS(5)*UV(2)+JVS(8)*UV(3)+JVS(11)*UV(4)
+  JTUV(1) = JVS(1)*UV(1)+JVS(5)*UV(3)
+  JTUV(2) = JVS(2)*UV(2)
+  JTUV(3) = JVS(3)*UV(2)+JVS(6)*UV(3)+JVS(8)*UV(4)
+  JTUV(4) = JVS(4)*UV(2)+JVS(7)*UV(3)+JVS(9)*UV(4)
       
 END SUBROUTINE JacTR_SP_Vec
 

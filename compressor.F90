@@ -10,15 +10,20 @@ program main
   REAL(dp)               :: RCNTRL(20)
   REAL(dp)               :: RSTATE(20)
   REAL(dp)               :: T, TIN, TOUT, start, end
-  REAL :: full_sumtime, comp_sumtime
+  REAL :: full_sumtime, comp_sumtime, compact_avg, full_avg
 
   ! COMPACTION
   INTEGER, ALLOCATABLE :: REMOVE(:)    ! Vector of species indexes to be removed from full mechanism
   INTEGER :: NRMV                      ! Number of species removed (size(REMOVE))
   
   INTEGER :: idx, S
+  INTEGER :: NAVG ! Number of iterations in the timing averaging loop
+  INTEGER :: NITR ! Number of integration iterations
 
   INTEGER, ALLOCATABLE :: rLU_IROW(:), rLU_ICOL(:) ! temporary, for display purposes
+
+  NITR = 100000
+  NAVG = 1
 
   ALLOCATE(DO_SLV(NVAR+1))  ! Yes/no (1/0), Used to control KppSolve()
   ALLOCATE(DO_FUN(NVAR)  )  ! Yes/no (1/0), Used to control Fun()
@@ -50,7 +55,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(:) = (/ind_D/) ! Species
+  REMOVE(:) = (/ind_A/) ! Species
 
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -175,19 +180,19 @@ program main
   write(*,*) 'cLU_DIAG: ', cLU_DIAG
   write(*,*) '---------------'
   write(*,*) ' '
-  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
+!  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
   write(*,*) 'JVS_MAP: ', JVS_MAP
-  write(*,*) ' '
-  write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
+!  write(*,*) ' '
+!  write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
   write(*,*) 'SPC_MAP: ', SPC_MAP
-  write(*,*) ' '
-  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
+!  write(*,*) ' '
+!  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
   write(*,*) 'DO_SLV:  ', DO_SLV
-  write(*,*) ' '
-  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
+!  write(*,*) ' '
+!  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
   write(*,*) 'DO_FUN:  ', DO_FUN
-  write(*,*) ' '
-  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
+!  write(*,*) ' '
+!  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
   write(*,*) 'DO_JVS:  ', DO_JVS
 
   ! -------------------------------------------------------------------------- !
@@ -198,9 +203,6 @@ program main
   ! - the compacted mechanism will still process the full species vector, 
   !   C(NVAR), not c(rNVAR), only dC/dt of inactive species is zero
 
-  ! with DO_JVS and DO_SLV set above, this will 'try' to run a reduced mech, but will
-  ! dump errors since it still runs the full mech. Goal is to make it properly run the 
-  ! reduced mech.
   call compactedmech()
 
   DO i=1,NVAR
@@ -216,7 +218,7 @@ program main
   ! -------------------------------------------------------------------------- !
 
   ! 5. Report timing comparison
-  write(*,'(a,f4.1,a)') ' compact/full: ', 100.*comp_sumtime/full_sumtime, "%" 
+  write(*,'(a,f5.1,a)') ' compact/full: ', 100.*compact_avg/full_avg, "%" 
 !  write(*,'(a,f4.1,a)') ' problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
 !  write(*,'(a,f4.1,a)') ' non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
 
@@ -226,7 +228,7 @@ CONTAINS
     IMPLICIT NONE
     ! Set OPTIONS
     IERR      = 0                 ! Success or failure flag
-    ISTATUS   = 0.0_dp            ! Rosenbrock output 
+    ISTATUS   = 0                 ! Rosenbrock output 
     RCNTRL    = 0.0_dp            ! Rosenbrock input
     RSTATE    = 0.0_dp            ! Rosenbrock output
     ICNTRL    = 0
@@ -247,31 +249,31 @@ CONTAINS
     write(*,*) ' '
     write(*,*) 'Running the full mechanism'
     
-    call cpu_time(start)
     full_sumtime   = 0.
     ! Initialize
-    call Initialize()
     ! --- INTEGRATION & TIMING LOOP
-    DO I=1,1
-       DO N=1,1
+    DO I=1,NAVG
+       call cpu_time(start)
+       DO N=1,NITR
+          call Initialize()
           ! Set C
           C(1:NVAR)   = 1e8
-          C(ind_D)    = 1e-15
           VAR(1:NVAR) = C(1:NVAR)
           ! Set RCONST
-          R(1) = 1.
-          R(2) = 2.
+          R(1) = 1.e-10
+          R(2) = 1.
           call Update_RCONST()
           ! Integrate
           CALL Integrate( TIN,    TOUT,    ICNTRL,      &
                RCNTRL, ISTATUS, RSTATE, IERR )
           C(1:NVAR)   = VAR(:)
+!          write(*,*) ISTATUS
        ENDDO
        call cpu_time(end)
        full_sumtime = full_sumtime+end-start
     ENDDO
-    write(*,*) "Average integration time: ", full_sumtime/1.
-    !  write(*,*) ' '
+    full_avg = full_sumtime/dble(NAVG)
+    write(*,*) "Average integration time: ", full_avg
     write(*,*) '---------------'
   end subroutine fullmech
 
@@ -304,34 +306,31 @@ CONTAINS
     write(*,*) ' '
     write(*,*) 'Running the reduced mechanism'
     
-    call cpu_time(start)
     comp_sumtime   = 0.
     ! Initialize
-    call Initialize()
-    
     ! --- INTEGRATION & TIMING LOOP
-    DO I=1,1 ! Iterate to generate average comp time
-       DO N=1,1
+    DO I=1,NAVG ! Iterate to generate average comp time
+       call cpu_time(start)
+       DO N=1,NITR
+          call Initialize()
           ! Set C
           C(1:NVAR)   = 1e8
-          C(ind_D)    = 1e-15
           VAR(1:NVAR) = C(1:NVAR)
-          
           ! Set RCONST
-          R(1) = 1.
-          R(2) = 2.
+          R(1) = 1.e-10
+          R(2) = 1.
           call Update_RCONST()
-          
           ! Integrate
           CALL cIntegrate( TIN,    TOUT,    ICNTRL,      &
                RCNTRL, ISTATUS, RSTATE, IERR )
           C(1:NVAR)       = VAR(:)
-          
+!          write(*,*) ISTATUS
        ENDDO
        call cpu_time(end)
        comp_sumtime = comp_sumtime+end-start
     ENDDO
-    write(*,*) "Average integration time: ", comp_sumtime/1.
+    compact_avg = comp_sumtime/dble(NAVG)
+    write(*,*) "Average integration time: ", compact_avg
     write(*,*) '---------------'
   end subroutine compactedmech
 

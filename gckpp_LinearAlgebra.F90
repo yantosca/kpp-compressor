@@ -645,17 +645,17 @@ SUBROUTINE KppSolve ( JVS, X )
   REAL(kind=dp) :: X(NVAR)
 
 IF (DO_SLV(3).eq.1) &
-  X(3) = X(3)-JVS(6)*X(2)
+  X(3) = X(3)-JVS(5)*X(1)
 IF (DO_SLV(4).eq.1) &
-  X(4) = X(4)-JVS(9)*X(2)-JVS(10)*X(3)
+  X(4) = X(4)-JVS(8)*X(3)
 IF (DO_SLV(4).eq.1) &
-  X(4) = X(4)/JVS(11)
+  X(4) = X(4)/JVS(9)
 IF (DO_SLV(3).eq.1) &
-  X(3) = (X(3)-JVS(8)*X(4))/(JVS(7))
+  X(3) = (X(3)-JVS(7)*X(4))/(JVS(6))
 IF (DO_SLV(2).eq.1) &
-  X(2) = (X(2)-JVS(5)*X(4))/(JVS(4))
+  X(2) = (X(2)-JVS(3)*X(3)-JVS(4)*X(4))/(JVS(2))
 IF (DO_SLV(1).eq.1) &
-  X(1) = (X(1)-JVS(2)*X(3)-JVS(3)*X(4))/(JVS(1))
+  X(1) = X(1)/JVS(1)
       
 END SUBROUTINE KppSolve
 
@@ -683,13 +683,13 @@ SUBROUTINE KppSolveTR ( JVS, X, XX )
   REAL(kind=dp) :: XX(NVAR)
 
   XX(1) = X(1)/JVS(1)
-  XX(2) = X(2)/JVS(4)
-  XX(3) = (X(3)-JVS(2)*XX(1))/(JVS(7))
-  XX(4) = (X(4)-JVS(3)*XX(1)-JVS(5)*XX(2)-JVS(8)*XX(3))/(JVS(11))
+  XX(2) = X(2)/JVS(2)
+  XX(3) = (X(3)-JVS(3)*XX(2))/(JVS(6))
+  XX(4) = (X(4)-JVS(4)*XX(2)-JVS(7)*XX(3))/(JVS(9))
   XX(4) = XX(4)
-  XX(3) = XX(3)-JVS(10)*XX(4)
-  XX(2) = XX(2)-JVS(6)*XX(3)-JVS(9)*XX(4)
-  XX(1) = XX(1)
+  XX(3) = XX(3)-JVS(8)*XX(4)
+  XX(2) = XX(2)
+  XX(1) = XX(1)-JVS(5)*XX(3)
       
 END SUBROUTINE KppSolveTR
 

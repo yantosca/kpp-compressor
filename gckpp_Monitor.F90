@@ -24,15 +24,15 @@ MODULE gckpp_Monitor
 
 
   CHARACTER(LEN=15), PARAMETER, DIMENSION(4) :: SPC_NAMES = (/ &
-     'D              ','B              ','C              ', & ! index 1 - 3
-     'A              ' /)
+     'A              ','D              ','C              ', & ! index 1 - 3
+     'B              ' /)
 
   INTEGER, DIMENSION(1) :: LOOKAT
   INTEGER, DIMENSION(1) :: MONITOR
   CHARACTER(LEN=15), DIMENSION(1) :: SMASS
   CHARACTER(LEN=100), PARAMETER, DIMENSION(2) :: EQN_NAMES = (/ &
-     'B + A --> C                                                                                         ', & ! index 1
-     'C + A --> D                                                                                         ' /)
+     '    A --> C                                                                                         ', & ! index 1
+     'C + B --> D                                                                                         ' /)
 
   CHARACTER(LEN=15), DIMENSION(1) :: FAM_NAMES
 ! INLINED global variables

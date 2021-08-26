@@ -163,8 +163,8 @@ SUBROUTINE Shuffle_user2kpp ( V_USER, V )
 ! V - Concentrations of variable species (local)
   REAL(kind=dp) :: V(NVAR)
 
-  V(4) = V_USER(1)
-  V(2) = V_USER(2)
+  V(1) = V_USER(1)
+  V(4) = V_USER(2)
   V(3) = V_USER(3)
       
 END SUBROUTINE Shuffle_user2kpp
@@ -189,8 +189,8 @@ SUBROUTINE Shuffle_kpp2user ( V, V_USER )
 ! V_USER - Concentration of variable species in USER's order
   REAL(kind=dp) :: V_USER(NVAR)
 
-  V_USER(1) = V(4)
-  V_USER(2) = V(2)
+  V_USER(1) = V(1)
+  V_USER(2) = V(4)
   V_USER(3) = V(3)
       
 END SUBROUTINE Shuffle_kpp2user

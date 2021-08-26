@@ -46,9 +46,9 @@ MODULE gckpp_Parameters
 ! NFIXST - Starting of fixed in conc. vect.
   INTEGER, PARAMETER :: NFIXST = 5 
 ! NONZERO - Number of nonzero entries in Jacobian
-  INTEGER, PARAMETER :: NONZERO = 11 
+  INTEGER, PARAMETER :: NONZERO = 9 
 ! LU_NONZERO - Number of nonzero entries in LU factoriz. of Jacobian
-  INTEGER, PARAMETER :: LU_NONZERO = 11 
+  INTEGER, PARAMETER :: LU_NONZERO = 9 
 ! CNVAR - (NVAR+1) Number of elements in compressed row format
   INTEGER, PARAMETER :: CNVAR = 5 
 ! NLOOKAT - Number of species to look at
@@ -61,10 +61,10 @@ MODULE gckpp_Parameters
 ! Index declaration for variable species in C and VAR
 !   VAR(ind_spc) = C(ind_spc)
 
-  INTEGER, PARAMETER :: ind_D = 1 
-  INTEGER, PARAMETER :: ind_B = 2 
+  INTEGER, PARAMETER :: ind_A = 1 
+  INTEGER, PARAMETER :: ind_D = 2 
   INTEGER, PARAMETER :: ind_C = 3 
-  INTEGER, PARAMETER :: ind_A = 4 
+  INTEGER, PARAMETER :: ind_B = 4 
 
 ! Index declaration for fixed species in C
 !   C(ind_spc)

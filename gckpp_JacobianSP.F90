@@ -29,17 +29,17 @@ MODULE gckpp_JacobianSP
 ! Sparse Jacobian Data
 
 
-  INTEGER, PARAMETER, DIMENSION(11) :: LU_IROW = (/ &
-       1,  1,  1,  2,  2,  3,  3,  3,  4,  4,  4 /)
+  INTEGER, PARAMETER, DIMENSION(9) :: LU_IROW = (/ &
+       1,  2,  2,  2,  3,  3,  3,  4,  4 /)
 
-  INTEGER, PARAMETER, DIMENSION(11) :: LU_ICOL = (/ &
-       1,  3,  4,  2,  4,  2,  3,  4,  2,  3,  4 /)
+  INTEGER, PARAMETER, DIMENSION(9) :: LU_ICOL = (/ &
+       1,  2,  3,  4,  1,  3,  4,  3,  4 /)
 
   INTEGER, PARAMETER, DIMENSION(5) :: LU_CROW = (/ &
-       1,  4,  6,  9, 12 /)
+       1,  2,  5,  8, 10 /)
 
   INTEGER, PARAMETER, DIMENSION(5) :: LU_DIAG = (/ &
-       1,  4,  7, 11, 12 /)
+       1,  2,  6,  9, 10 /)
 
   INTEGER, ALLOCATABLE :: DO_JVS(:)
   INTEGER, ALLOCATABLE :: DO_SLV(:)
@@ -49,7 +49,7 @@ MODULE gckpp_JacobianSP
   INTEGER, ALLOCATABLE :: cLU_CROW(:)  ! Compacted compressed row vector
   INTEGER, ALLOCATABLE :: cLU_DIAG(:)  ! Compacted DIAG indexes
   INTEGER, ALLOCATABLE :: JVS_MAP(:)   ! Map to JVS from compacted sparse data
-  INTEGER, ALLOCATABLE :: SPC_MAP(:)   ! Map function output
+  INTEGER, ALLOCATABLE :: SPC_MAP(:)   ! Map species (for Fun(), etc.)
   INTEGER :: rNVAR     ! Compacted number of variable species
   INTEGER :: cNONZERO  ! Compacted number of non-zero elements in cJVS
 

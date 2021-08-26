@@ -8,6 +8,6 @@ C     = IGNORE;
 D     = IGNORE;
 
 #EQUATIONS
-A + B = C : R(1);
-A + C = D : R(2);
+A = C : R(1);
+B + C = D : R(2);
 

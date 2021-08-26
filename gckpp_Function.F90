@@ -23,7 +23,6 @@
 MODULE gckpp_Function
 
   USE gckpp_Parameters
-  USE gckpp_JacobianSP, ONLY : DO_FUN
   IMPLICIT NONE
 
 ! A - Rate for each equation
@@ -47,6 +46,8 @@ CONTAINS
 
 SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
 
+ USE gckpp_JacobianSP, only : DO_FUN
+
 ! V - Concentrations of variable species (local)
   REAL(kind=dp) :: V(NVAR)
 ! F - Concentrations of fixed species (local)
@@ -60,7 +61,7 @@ SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
   REAL(kind=dp), OPTIONAL :: Aout(NREACT)
 
 ! Computation of equation rates
-  A(1) = RCT(1)*V(2)*V(4)
+  A(1) = RCT(1)*V(1)
   A(2) = RCT(2)*V(3)*V(4)
 
 
@@ -71,14 +72,14 @@ SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
 
 ! Aggregate function
 IF (DO_FUN(1).eq.1) &
-  Vdot(1) = A(2)
+  Vdot(1) = -A(1)
 IF (DO_FUN(2).eq.1) &
-  Vdot(2) = -A(1)
+  Vdot(2) = A(2)
 IF (DO_FUN(3).eq.1) &
   Vdot(3) = A(1)-A(2)
 IF (DO_FUN(4).eq.1) &
-  Vdot(4) = -A(1)-A(2)
-
+  Vdot(4) = -A(2)
+      
 END SUBROUTINE Fun
 
 ! End of Fun function

@@ -37,7 +37,7 @@ FC_HPUX    = f90
 FOPT_HPUX  = -O -u +Oall +check=on
 
 FC_GFORTRAN     = gfortran
-FOPT_GFORTRAN   = -cpp -O -g -fbacktrace -fcheck=bounds
+FOPT_GFORTRAN   = -cpp -O #-g -fbacktrace -fcheck=bounds
 
 # define FULL_ALGEBRA for non-sparse integration
 FC   = $(FC_$(COMPILER))

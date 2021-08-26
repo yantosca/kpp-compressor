@@ -543,7 +543,7 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
 !~~~>   Compute the function at current time
    CALL FunTemplate(T,Y,Fcn0) ! Reacts to DO_FUN()
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
-
+   
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
       CALL ros_FunTimeDerivative ( T, Roundoff, Y, &
@@ -594,7 +594,7 @@ Stage: DO istage = 1, ros_S
        DO j = 1, istage-1
          HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
          CALL WAXPY(rNVAR,HC,K(rNVAR*(j-1)+1),1,K(ioffset+1),1)
-       END DO
+      END DO
        IF ((.NOT. Autonomous).AND.(ros_Gamma(istage).NE.ZERO)) THEN
          HG = Direction*H*ros_Gamma(istage)
          CALL WAXPY(rNVAR,HG,dFdT,1,K(ioffset+1),1)
@@ -844,11 +844,13 @@ Stage: DO istage = 1, ros_S
    REAL(kind=dp), INTENT(IN) :: A(N,N)
    INTEGER :: ISING
 #else   
-   REAL(kind=dp), INTENT(IN) :: A(LU_NONZERO)
+   REAL(kind=dp), INTENT(IN) :: A(cNONZERO)
 #endif
    INTEGER, INTENT(IN) :: Pivot(N)
 !~~~> InOut variables
-   REAL(kind=dp), INTENT(INOUT) :: b(N)
+   REAL(kind=dp), INTENT(INOUT) :: b(rNVAR)
+   
+   REAL(kind=dp)                :: btmp(N), Atmp(LU_NONZERO)
 
 #ifdef FULL_ALGEBRA    
    CALL  DGETRS( 'N', N , 1, A, N, Pivot, b, N, ISING )
@@ -856,7 +858,10 @@ Stage: DO istage = 1, ros_S
       PRINT*,"Error in DGETRS. ISING=",ISING
    END IF  
 #else   
-   CALL KppSolve( A, b )
+   Atmp(JVS_MAP) = A
+   btmp(SPC_MAP) = b
+   CALL KppSolve( Atmp, btmp )
+   b = btmp(SPC_MAP)
 #endif
 
    ISTATUS(Nsol) = ISTATUS(Nsol) + 1
