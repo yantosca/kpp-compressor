@@ -21,12 +21,17 @@ program main
   INTEGER :: NITR ! Number of integration iterations
 
   INTEGER, ALLOCATABLE :: rLU_IROW(:), rLU_ICOL(:) ! temporary, for display purposes
+  INTEGER, ALLOCATABLE :: tDO_FUN(:), tDO_SLV(:), tDO_JVS(:)
 
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
-  NITR = 1000
-  NAVG = 20
+  NITR = 1!000
+  NAVG = 1!20
+
+  ALLOCATE(tDO_SLV(NVAR+1))
+  ALLOCATE(tDO_FUN(NVAR))
+  ALLOCATE(tDO_JVS(LU_NONZERO))
 
   ALLOCATE(DO_SLV(NVAR+1))  ! Yes/no (1/0), Used to control KppSolve()
   ALLOCATE(DO_FUN(NVAR)  )  ! Yes/no (1/0), Used to control Fun()
@@ -37,6 +42,10 @@ program main
   DO_FUN   = 1 ! Compute all in Fun()
   DO_JVS   = 1 ! Compute all in JacSP()
   cNONZERO = 0 ! Initialize number of nonzero elements in reduced mechanism
+
+  tDO_SLV  = 1
+  tDO_FUN  = 1
+  tDO_JVS  = 1
 
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
@@ -56,8 +65,8 @@ program main
   !    But the appropriate elements are set to zero, so the appropriate terms
   !    in KppSolve(), Fun() and Jac_SP() are not computed
 
-  DO_SLV(REMOVE(:)) = 0  
-  DO_FUN(REMOVE(:)) = 0  
+  tDO_SLV(REMOVE(:)) = 0  
+  tDO_FUN(REMOVE(:)) = 0  
 
   ! -- -- Loop through vectors
   ! -- -- -- Count the number of nonzero elements in the reduced
@@ -84,7 +93,7 @@ program main
   ! -- -- Set up SPC_MAP() to map full-mech Fcn to compressed Fcn
   S = 1 ! rNVAR index
   DO i=1,NVAR
-     IF (DO_FUN(i) .eq. 1) THEN
+     IF (tDO_FUN(i) .eq. 1) THEN
         SPC_MAP(S) = i
         S=S+1
      ENDIF
@@ -117,7 +126,7 @@ program main
      ENDIF
      ! Toggle DO_JVS()
      IF (LU_IROW(i).eq.REMOVE(S).or.LU_ICOL(i).eq.REMOVE(S)) THEN
-        DO_JVS(i) = 0 ! Turn off this term in Jac_SP()
+        tDO_JVS(i) = 0 ! Turn off this term in Jac_SP()
      ENDIF
   ENDDO
   ENDDO
@@ -188,16 +197,23 @@ program main
   write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
 !  write(*,*) ' '
 !  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
-  write(*,'(a,'//nv//'i4)') ' DO_SLV:   ', DO_SLV
+  write(*,'(a,'//nv//'i4)') ' DO_SLV:   ', tDO_SLV
 !  write(*,*) ' '
 !  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
-  write(*,'(a,'//nv//'i4)') ' DO_FUN:   ', DO_FUN
+  write(*,'(a,'//nv//'i4)') ' DO_FUN:   ', tDO_FUN
 !  write(*,*) ' '
 !  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
-  write(*,'(a,'//lunz//'i4)') ' DO_JVS:   ', DO_JVS
+  write(*,'(a,'//lunz//'i4)') ' DO_JVS:   ', tDO_JVS
 
   ! -------------------------------------------------------------------------- !
   ! 2. Run the full mechanism
+
+  ! Make sure everything is calculated. This should be automatic if not running
+  ! a compacted mech. (This is currently also done above, but repeated here for
+  ! safety. -- MSL
+  DO_FUN = 1
+  DO_SLV = 1
+  DO_JVS = 1
 
   call fullmech()
   DO i=1,NVAR
@@ -211,6 +227,12 @@ program main
   ! - Will need to respond to new 'parameters' cNVAR, cNONZERO
   ! - the compacted mechanism will still process the full species vector, 
   !   C(NVAR), not c(rNVAR), only dC/dt of inactive species is zero
+
+  ! OK, now turn on the comp controls
+
+  DO_SLV = tDO_SLV
+  DO_FUN = tDO_FUN
+  DO_JVS = tDO_JVS
 
   call compactedmech()
   DO i=1,NVAR
@@ -257,18 +279,21 @@ CONTAINS
     TOUT = T + 3600._dp
     TEMP = 298.
     
+    C = 0._dp
+
     write(*,*) ' '
     write(*,*) 'Running the full mechanism'
     
     full_sumtime   = 0.
-    ! Initialize
+
     ! --- INTEGRATION & TIMING LOOP
     DO I=1,NAVG
        call cpu_time(start)
        DO N=1,NITR
+          ! Initialize
           call Initialize()
           ! Set C
-          C(1:NVAR)   = 1e8
+          C(1:NVAR)   = 1.e8_dp
           VAR(1:NVAR) = C(1:NVAR)
           ! Set RCONST
           R(1) = 1.e-10
@@ -314,18 +339,21 @@ CONTAINS
     TOUT = T + 3600._dp
     TEMP = 298.
     
+    C = 0._dp
+
     write(*,*) ' '
     write(*,*) 'Running the reduced mechanism'
     
     comp_sumtime   = 0.
-    ! Initialize
+
     ! --- INTEGRATION & TIMING LOOP
     DO I=1,NAVG ! Iterate to generate average comp time
        call cpu_time(start)
        DO N=1,NITR
+          ! Initialize
           call Initialize()
           ! Set C
-          C(1:NVAR)   = 1e8
+          C(1:NVAR)   = 1.e8_dp
           VAR(1:NVAR) = C(1:NVAR)
           ! Set RCONST
           R(1) = 1.e-10
