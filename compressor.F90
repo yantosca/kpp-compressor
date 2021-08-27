@@ -213,7 +213,6 @@ program main
   !   C(NVAR), not c(rNVAR), only dC/dt of inactive species is zero
 
   call compactedmech()
-
   DO i=1,NVAR
      write(*,*) SPC_NAMES(i), C(i)
   END DO
@@ -227,6 +226,9 @@ program main
   ! -------------------------------------------------------------------------- !
 
   ! 5. Report timing comparison
+  ! XXXXX -- For some reason, the ratio below changes depending on which
+  !          integration is called first.
+
   write(*,'(a,f5.1,a)') ' compact/full: ', 100.*compact_avg/full_avg, "%" 
 !  write(*,'(a,f4.1,a)') ' problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
 !  write(*,'(a,f4.1,a)') ' non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
