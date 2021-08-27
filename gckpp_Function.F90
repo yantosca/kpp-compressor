@@ -61,17 +61,17 @@ SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
   REAL(kind=dp), OPTIONAL :: Aout(NREACT)
 
 ! Computation of equation rates
-  A(1) = RCT(1)*V(7)
-  A(2) = RCT(2)*V(10)*V(11)
-  A(3) = RCT(3)*V(5)*V(8)
-  A(4) = RCT(4)*V(9)*V(11)
+  A(1) = RCT(1)*V(9)
+  A(2) = RCT(2)*V(9)*V(10)
+  A(3) = RCT(3)*V(6)*V(8)
+  A(4) = RCT(4)*V(10)*V(11)
   A(5) = RCT(5)*V(12)
-  A(6) = RCT(6)*V(9)*V(9)
-  A(7) = RCT(7)*V(6)
-  A(8) = RCT(8)*V(4)*V(8)
-  A(9) = RCT(9)*V(6)*V(8)
-  A(10) = RCT(10)*V(9)*V(10)
-  A(11) = RCT(11)*V(8)*V(9)
+  A(6) = RCT(6)*V(11)*V(11)
+  A(7) = RCT(7)*V(7)
+  A(8) = RCT(8)*V(5)*V(8)
+  A(9) = RCT(9)*V(7)*V(8)
+  A(10) = RCT(10)*V(9)*V(11)
+  A(11) = RCT(11)*V(8)*V(11)
   A(12) = RCT(12)*V(8)*V(12)
 
 
@@ -88,21 +88,21 @@ IF (DO_FUN(2)) &
 IF (DO_FUN(3)) &
   Vdot(3) = A(9)+A(11)
 IF (DO_FUN(4)) &
-  Vdot(4) = -A(8)
+  Vdot(4) = A(1)+A(2)+A(6)+2*A(10)+A(11)
 IF (DO_FUN(5)) &
-  Vdot(5) = -A(3)+A(8)
+  Vdot(5) = -A(8)
 IF (DO_FUN(6)) &
-  Vdot(6) = A(6)-A(7)-A(9)
+  Vdot(6) = -A(3)+A(8)
 IF (DO_FUN(7)) &
-  Vdot(7) = A(2)+A(6)+2*A(10)+A(11)
+  Vdot(7) = A(6)-A(7)-A(9)
 IF (DO_FUN(8)) &
   Vdot(8) = 2*A(1)-A(3)+A(4)+2*A(7)-A(8)-A(9)+A(10)-A(11)-A(12)
 IF (DO_FUN(9)) &
-  Vdot(9) = A(3)-A(4)-2*A(6)+A(8)+A(9)-A(10)-A(11)
+  Vdot(9) = -A(1)-A(2)+A(5)-A(10)
 IF (DO_FUN(10)) &
-  Vdot(10) = -A(2)+A(5)-A(10)
+  Vdot(10) = -A(2)-A(4)+A(5)
 IF (DO_FUN(11)) &
-  Vdot(11) = -A(2)-A(4)+A(5)
+  Vdot(11) = A(3)-A(4)-2*A(6)+A(8)+A(9)-A(10)-A(11)
 IF (DO_FUN(12)) &
   Vdot(12) = A(2)+A(4)-A(5)-A(12)
       

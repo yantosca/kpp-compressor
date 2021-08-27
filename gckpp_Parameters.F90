@@ -36,7 +36,7 @@ MODULE gckpp_Parameters
 ! NFAM - Number of Prod/Loss Families
   INTEGER, PARAMETER :: NFAM = 1 
 ! NVARACT - Number of Active species
-  INTEGER, PARAMETER :: NVARACT = 9 
+  INTEGER, PARAMETER :: NVARACT = 8 
 ! NFIX - Number of Fixed species
   INTEGER, PARAMETER :: NFIX = 1 
 ! NREACT - Number of reactions
@@ -46,9 +46,9 @@ MODULE gckpp_Parameters
 ! NFIXST - Starting of fixed in conc. vect.
   INTEGER, PARAMETER :: NFIXST = 13 
 ! NONZERO - Number of nonzero entries in Jacobian
-  INTEGER, PARAMETER :: NONZERO = 52 
+  INTEGER, PARAMETER :: NONZERO = 51 
 ! LU_NONZERO - Number of nonzero entries in LU factoriz. of Jacobian
-  INTEGER, PARAMETER :: LU_NONZERO = 53 
+  INTEGER, PARAMETER :: LU_NONZERO = 52 
 ! CNVAR - (NVAR+1) Number of elements in compressed row format
   INTEGER, PARAMETER :: CNVAR = 13 
 ! NLOOKAT - Number of species to look at
@@ -64,14 +64,14 @@ MODULE gckpp_Parameters
   INTEGER, PARAMETER :: ind_CO2 = 1 
   INTEGER, PARAMETER :: ind_HNO3 = 2 
   INTEGER, PARAMETER :: ind_H2O = 3 
-  INTEGER, PARAMETER :: ind_CH4 = 4 
-  INTEGER, PARAMETER :: ind_CO = 5 
-  INTEGER, PARAMETER :: ind_H2O2 = 6 
-  INTEGER, PARAMETER :: ind_O2 = 7 
+  INTEGER, PARAMETER :: ind_O2 = 4 
+  INTEGER, PARAMETER :: ind_CH4 = 5 
+  INTEGER, PARAMETER :: ind_CO = 6 
+  INTEGER, PARAMETER :: ind_H2O2 = 7 
   INTEGER, PARAMETER :: ind_OH = 8 
-  INTEGER, PARAMETER :: ind_HO2 = 9 
-  INTEGER, PARAMETER :: ind_O3 = 10 
-  INTEGER, PARAMETER :: ind_NO = 11 
+  INTEGER, PARAMETER :: ind_O3 = 9 
+  INTEGER, PARAMETER :: ind_NO = 10 
+  INTEGER, PARAMETER :: ind_HO2 = 11 
   INTEGER, PARAMETER :: ind_NO2 = 12 
 
 ! Index declaration for fixed species in C

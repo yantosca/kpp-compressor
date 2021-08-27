@@ -27,8 +27,8 @@ program main
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
-  NITR = 1000
-  NAVG = 50
+  NITR = 500
+  NAVG = 20
 
   ALLOCATE(tDO_SLV(NVAR+1))
   ALLOCATE(tDO_FUN(NVAR))
@@ -54,7 +54,7 @@ program main
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
 
-  NRMV     = 5 ! Remove 1 species for testing. This would be determined online.
+  NRMV     = 6 ! Remove 1 species for testing. This would be determined online.
   rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
 
   ! ALLOCATE
@@ -62,7 +62,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_H2O,ind_O2/) ! Species
+  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_H2O,ind_O2,ind_CO/) ! Species
 
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -296,6 +296,11 @@ CONTAINS
           call Initialize()
           ! Set C
           C(1:NVAR)   = 1.e8_dp
+          C(ind_O2)   = 5.3e18_dp
+          C(ind_CH4)  = 4.2e13_dp
+          C(ind_CO)   = 1.0e12_dp
+          C(ind_NO)   = 1.25e9_dp
+          C(ind_NO2)  = 1.25e9_dp
           VAR(1:NVAR) = C(1:NVAR)
           ! Set RCONST
           R(1) = 1.e-10
@@ -359,6 +364,11 @@ CONTAINS
           call Initialize()
           ! Set C
           C(1:NVAR)   = 1.e8_dp
+          C(ind_O2)   = 5.3e18_dp
+          C(ind_CH4)  = 4.2e13_dp
+          C(ind_CO)   = 1.0e12_dp
+          C(ind_NO)   = 1.25e9_dp
+          C(ind_NO2)  = 1.25e9_dp
           VAR(1:NVAR) = C(1:NVAR)
           ! Set RCONST
           R(1) = 1.e-10
