@@ -644,17 +644,17 @@ SUBROUTINE KppSolve ( JVS, X )
 ! X - Vector for variables
   REAL(kind=dp) :: X(NVAR)
 
-IF (DO_SLV(3).eq.1) &
+IF (DO_SLV(3)) &
   X(3) = X(3)-JVS(5)*X(1)
-IF (DO_SLV(4).eq.1) &
+IF (DO_SLV(4)) &
   X(4) = X(4)-JVS(8)*X(3)
-IF (DO_SLV(4).eq.1) &
+IF (DO_SLV(4)) &
   X(4) = X(4)/JVS(9)
-IF (DO_SLV(3).eq.1) &
+IF (DO_SLV(3)) &
   X(3) = (X(3)-JVS(7)*X(4))/(JVS(6))
-IF (DO_SLV(2).eq.1) &
+IF (DO_SLV(2)) &
   X(2) = (X(2)-JVS(3)*X(3)-JVS(4)*X(4))/(JVS(2))
-IF (DO_SLV(1).eq.1) &
+IF (DO_SLV(1)) &
   X(1) = X(1)/JVS(1)
       
 END SUBROUTINE KppSolve

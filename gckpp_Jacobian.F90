@@ -65,31 +65,31 @@ SUBROUTINE Jac_SP ( V, F, RCT, JVS )
   B(3) = RCT(2)*V(3)
 
 ! Construct the Jacobian terms from B's
-IF (DO_JVS(1).eq.1) &
+IF (DO_JVS(1)) &
 ! JVS(1) = Jac_FULL(1,1)
   JVS(1) = -B(1)
-IF (DO_JVS(2).eq.1) &
+IF (DO_JVS(2)) &
 ! JVS(2) = Jac_FULL(2,2)
   JVS(2) = 0
-IF (DO_JVS(3).eq.1) &
+IF (DO_JVS(3)) &
 ! JVS(3) = Jac_FULL(2,3)
   JVS(3) = B(2)
-IF (DO_JVS(4).eq.1) &
+IF (DO_JVS(4)) &
 ! JVS(4) = Jac_FULL(2,4)
   JVS(4) = B(3)
-IF (DO_JVS(5).eq.1) &
+IF (DO_JVS(5)) &
 ! JVS(5) = Jac_FULL(3,1)
   JVS(5) = B(1)
-IF (DO_JVS(6).eq.1) &
+IF (DO_JVS(6)) &
 ! JVS(6) = Jac_FULL(3,3)
   JVS(6) = -B(2)
-IF (DO_JVS(7).eq.1) &
+IF (DO_JVS(7)) &
 ! JVS(7) = Jac_FULL(3,4)
   JVS(7) = -B(3)
-IF (DO_JVS(8).eq.1) &
+IF (DO_JVS(8)) &
 ! JVS(8) = Jac_FULL(4,3)
   JVS(8) = -B(2)
-IF (DO_JVS(9).eq.1) &
+IF (DO_JVS(9)) &
 ! JVS(9) = Jac_FULL(4,4)
   JVS(9) = -B(3)
       

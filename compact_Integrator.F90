@@ -581,10 +581,10 @@ Stage: DO istage = 1, ros_S
 	 Ynew(1:N) = Y(1:N)
          DO j = 1, istage-1
 ! --- Option 1: This one seems slightly slower than option 2.
-!            Ysub = Ynew(SPC_MAP)
-!            CALL WAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
-!                 K(rNVAR*(j-1)+1),1,Ysub,1)
-!            Ynew(SPC_MAP) = Ysub
+            !Ysub = Ynew(SPC_MAP)
+            !CALL WAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
+            !     K(rNVAR*(j-1)+1),1,Ysub,1)
+            !Ynew(SPC_MAP) = Ysub
 ! --- Option 2: This one seems slightly faster than option 1.
 !               See cWAXPY below.
             CALL cWAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
@@ -615,11 +615,11 @@ Stage: DO istage = 1, ros_S
    Ynew(1:N) = Y(1:N)
 
 ! --- Option 1: This one seems slightly slower than option 2.
-!   Ysub = Ynew(SPC_MAP)
-!   DO j=1,ros_S
-!         CALL cWAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ysub,1)
-!   END DO
-!   Ynew(SPC_MAP) = Ysub
+   !Ysub = Ynew(SPC_MAP)
+   !DO j=1,ros_S
+   !      CALL WAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ysub,1)
+   !END DO
+   !Ynew(SPC_MAP) = Ysub
 
 ! --- Option 2: This one seems slightly faster than option 1.
    DO j=1,ros_S

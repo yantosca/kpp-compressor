@@ -41,9 +41,9 @@ MODULE gckpp_JacobianSP
   INTEGER, PARAMETER, DIMENSION(5) :: LU_DIAG = (/ &
        1,  2,  6,  9, 10 /)
 
-  INTEGER, ALLOCATABLE :: DO_JVS(:)
-  INTEGER, ALLOCATABLE :: DO_SLV(:)
-  INTEGER, ALLOCATABLE :: DO_FUN(:)
+  LOGICAL, ALLOCATABLE :: DO_JVS(:)
+  LOGICAL, ALLOCATABLE :: DO_SLV(:)
+  LOGICAL, ALLOCATABLE :: DO_FUN(:)
   INTEGER, ALLOCATABLE :: cLU_IROW(:)  ! Compacted ROW indexes
   INTEGER, ALLOCATABLE :: cLU_ICOL(:)  ! Compacted COL indexes
   INTEGER, ALLOCATABLE :: cLU_CROW(:)  ! Compacted compressed row vector

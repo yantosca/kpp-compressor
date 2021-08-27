@@ -71,13 +71,13 @@ SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
 
 
 ! Aggregate function
-IF (DO_FUN(1).eq.1) &
+IF (DO_FUN(1)) &
   Vdot(1) = -A(1)
-IF (DO_FUN(2).eq.1) &
+IF (DO_FUN(2)) &
   Vdot(2) = A(2)
-IF (DO_FUN(3).eq.1) &
+IF (DO_FUN(3)) &
   Vdot(3) = A(1)-A(2)
-IF (DO_FUN(4).eq.1) &
+IF (DO_FUN(4)) &
   Vdot(4) = -A(2)
       
 END SUBROUTINE Fun

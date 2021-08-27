@@ -21,13 +21,14 @@ program main
   INTEGER :: NITR ! Number of integration iterations
 
   INTEGER, ALLOCATABLE :: rLU_IROW(:), rLU_ICOL(:) ! temporary, for display purposes
-  INTEGER, ALLOCATABLE :: tDO_FUN(:), tDO_SLV(:), tDO_JVS(:)
+  INTEGER              :: iSPC_MAP(NVAR)
+  LOGICAL, ALLOCATABLE :: tDO_FUN(:), tDO_SLV(:), tDO_JVS(:)
 
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
-  NITR = 1!000
-  NAVG = 1!20
+  NITR = 1000
+  NAVG = 20
 
   ALLOCATE(tDO_SLV(NVAR+1))
   ALLOCATE(tDO_FUN(NVAR))
@@ -38,14 +39,16 @@ program main
   ALLOCATE(DO_JVS(LU_NONZERO)) ! Yes/No (1/0), compute term, used to control Jac_SP()
 
   ! Temporoary settings.
-  DO_SLV   = 1 ! Compute all in KppSolve()
-  DO_FUN   = 1 ! Compute all in Fun()
-  DO_JVS   = 1 ! Compute all in JacSP()
+  DO_SLV   = .true. ! Compute all in KppSolve()
+  DO_FUN   = .true. ! Compute all in Fun()
+  DO_JVS   = .true. ! Compute all in JacSP()
   cNONZERO = 0 ! Initialize number of nonzero elements in reduced mechanism
 
-  tDO_SLV  = 1
-  tDO_FUN  = 1
-  tDO_JVS  = 1
+  tDO_SLV  = .true.
+  tDO_FUN  = .true.
+  tDO_JVS  = .true.
+
+  iSPC_MAP = 0
 
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
@@ -65,8 +68,8 @@ program main
   !    But the appropriate elements are set to zero, so the appropriate terms
   !    in KppSolve(), Fun() and Jac_SP() are not computed
 
-  tDO_SLV(REMOVE(:)) = 0  
-  tDO_FUN(REMOVE(:)) = 0  
+  tDO_SLV(REMOVE(:)) = .false.
+  tDO_FUN(REMOVE(:)) = .false.
 
   ! -- -- Loop through vectors
   ! -- -- -- Count the number of nonzero elements in the reduced
@@ -93,40 +96,33 @@ program main
   ! -- -- Set up SPC_MAP() to map full-mech Fcn to compressed Fcn
   S = 1 ! rNVAR index
   DO i=1,NVAR
-     IF (tDO_FUN(i) .eq. 1) THEN
+     IF (tDO_FUN(i)) THEN
         SPC_MAP(S) = i
+        iSPC_MAP(i) = S
         S=S+1
      ENDIF
   ENDDO
 
+  write(*,*) '<<>> ', iSPC_MAP
+
   ! -- -- -- recompute LU_IROW
   ! -- -- -- recompute LU_ICOL
-  DO S = 1,NRMV
+  DO S=1,size(REMOVE)
   idx = 0
   DO i = 1,NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
      ! Remove row & column elements of deactivated species
      ! Populate cLU_IROW & cLU_ICOL
      IF (LU_IROW(i).ne.REMOVE(S).and.LU_ICOL(i).ne.REMOVE(S)) THEN
         idx=idx+1
-        IF (LU_IROW(i).gt.S) THEN
-           cLU_IROW(idx) = LU_IROW(i)-S
-           rLU_IROW(i)   = LU_IROW(i)
-        ELSE 
-           cLU_IROW(idx) = LU_IROW(i)
-           rLU_IROW(i)   = LU_IROW(i)
-        ENDIF
-        IF (LU_ICOL(i).gt.S) THEN
-           cLU_ICOL(idx) = LU_ICOL(i)-S
-           rLU_ICOL(i)   = LU_ICOL(i)
-        ELSE
-           cLU_ICOL(idx) = LU_ICOL(i)
-           rLU_ICOL(i)   = LU_ICOL(i)
-        ENDIF
+        cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
+        rLU_IROW(i)   = LU_IROW(i)
+        cLU_ICOL(idx) = iSPC_MAP(LU_ICOL(i))
+        rLU_ICOL(i)   = LU_ICOL(i)
         JVS_MAP(idx)  = i
      ENDIF
      ! Toggle DO_JVS()
      IF (LU_IROW(i).eq.REMOVE(S).or.LU_ICOL(i).eq.REMOVE(S)) THEN
-        tDO_JVS(i) = 0 ! Turn off this term in Jac_SP()
+        tDO_JVS(i) = .false. ! Turn off this term in Jac_SP()
      ENDIF
   ENDDO
   ENDDO
@@ -197,13 +193,13 @@ program main
   write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
 !  write(*,*) ' '
 !  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
-  write(*,'(a,'//nv//'i4)') ' DO_SLV:   ', tDO_SLV
+  write(*,'(a,'//nv//'l4)') ' DO_SLV:   ', tDO_SLV
 !  write(*,*) ' '
 !  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
-  write(*,'(a,'//nv//'i4)') ' DO_FUN:   ', tDO_FUN
+  write(*,'(a,'//nv//'l4)') ' DO_FUN:   ', tDO_FUN
 !  write(*,*) ' '
 !  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
-  write(*,'(a,'//lunz//'i4)') ' DO_JVS:   ', tDO_JVS
+  write(*,'(a,'//lunz//'l4)') ' DO_JVS:   ', tDO_JVS
 
   ! -------------------------------------------------------------------------- !
   ! 2. Run the full mechanism
@@ -211,11 +207,13 @@ program main
   ! Make sure everything is calculated. This should be automatic if not running
   ! a compacted mech. (This is currently also done above, but repeated here for
   ! safety. -- MSL
-  DO_FUN = 1
-  DO_SLV = 1
-  DO_JVS = 1
+  DO_FUN = .true.
+  DO_SLV = .true.
+  DO_JVS = .true.
 
   call fullmech()
+  call fullmech()
+!  call compactedmech()
   DO i=1,NVAR
      write(*,*) SPC_NAMES(i), C(i)
   END DO
@@ -234,6 +232,7 @@ program main
   DO_FUN = tDO_FUN
   DO_JVS = tDO_JVS
 
+!  call fullmech()
   call compactedmech()
   DO i=1,NVAR
      write(*,*) SPC_NAMES(i), C(i)
@@ -273,6 +272,7 @@ CONTAINS
     ! Tolerances
     ATOL      = 1e-2_dp    
     RTOL      = 1e-2_dp
+
     ! Set ENV
     T    = 0d0
     TIN  = T
@@ -284,7 +284,10 @@ CONTAINS
     write(*,*) ' '
     write(*,*) 'Running the full mechanism'
     
-    full_sumtime   = 0.
+    full_avg     = 0.
+    full_sumtime = 0.
+    start        = 0.
+    end          = 0.
 
     ! --- INTEGRATION & TIMING LOOP
     DO I=1,NAVG
@@ -320,7 +323,7 @@ CONTAINS
     IMPLICIT NONE
     ! Set OPTIONS
     IERR      = 0                 ! Success or failure flag
-    ISTATUS   = 0.0_dp            ! Rosenbrock output 
+    ISTATUS   = 0                 ! Rosenbrock output 
     RCNTRL    = 0.0_dp            ! Rosenbrock input
     RSTATE    = 0.0_dp            ! Rosenbrock output
     ICNTRL    = 0
@@ -344,7 +347,10 @@ CONTAINS
     write(*,*) ' '
     write(*,*) 'Running the reduced mechanism'
     
-    comp_sumtime   = 0.
+    compact_avg  = 0.
+    comp_sumtime = 0.
+    start        = 0.
+    end          = 0.
 
     ! --- INTEGRATION & TIMING LOOP
     DO I=1,NAVG ! Iterate to generate average comp time
