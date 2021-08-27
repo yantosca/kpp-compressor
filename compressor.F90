@@ -28,7 +28,7 @@ program main
   character(len=20) :: lunz, nv, clunz, cnv
 
   NITR = 1000
-  NAVG = 20
+  NAVG = 50
 
   ALLOCATE(tDO_SLV(NVAR+1))
   ALLOCATE(tDO_FUN(NVAR))
@@ -62,7 +62,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_CO,ind_H2O2/) ! Species
+  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_H2O,ind_O2/) ! Species
 
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -114,6 +114,8 @@ program main
      IF (ANY(REMOVE.eq.LU_IROW(i)).or.ANY(REMOVE.eq.LU_ICOL(i))) THEN
         rLU_ICOL(i) = 0
         rLU_IROW(i) = 0
+        ! Toggle DO_JVS()
+        tDO_JVS(i) = .false. ! Turn off this term in Jac_SP()
      ELSE
         idx=idx+1
         cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
@@ -121,10 +123,6 @@ program main
         cLU_ICOL(idx) = iSPC_MAP(LU_ICOL(i))
         rLU_ICOL(i)   = LU_ICOL(i)
         JVS_MAP(idx)  = i
-     ENDIF
-     ! Toggle DO_JVS()
-     IF (LU_IROW(i).eq.REMOVE(S).or.LU_ICOL(i).eq.REMOVE(S)) THEN
-        tDO_JVS(i) = .false. ! Turn off this term in Jac_SP()
      ENDIF
   ENDDO
 
