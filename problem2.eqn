@@ -16,7 +16,7 @@ H2O    = IGNORE;
 O2     = IGNORE;
 
 #EQUATIONS
-O2   +  hv = 2OH  + O2	: 5.0d-8;
+O3   + hv  = 2OH  + O2	: 5.0d-8;
 NO   + O3  = NO2  + O2	: 1.2d-14;
 CO   + OH  = CO2  + HO2	: 2.4d-13;
 HO2  + NO  = OH   + NO2	: 9.2d-12;
