@@ -54,7 +54,7 @@ program main
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
 
-  NRMV     = 6 ! Remove 1 species for testing. This would be determined online.
+  NRMV     = 7 ! Remove 1 species for testing. This would be determined online.
   rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
 
   ! ALLOCATE
@@ -62,7 +62,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_H2O,ind_O2,ind_CO/) ! Species
+  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_H2O,ind_O2,ind_CO,ind_H2O2/) ! Species
 
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -211,11 +211,24 @@ program main
   DO_JVS = .true.
 
   call fullmech()
+
+   full_funtime = 0.
+   full_factime = 0.
+   full_rostime = 0.
+   full_jvstime = 0.
+   full_waxpytime = 0.
+
   call fullmech()
 !  call compactedmech()
   DO i=1,NVAR
      write(*,*) SPC_NAMES(i), C(i)
   END DO
+
+  write(*,*) 'rostime: ', full_rostime
+  write(*,*) 'funtime: ', full_funtime
+  write(*,*) 'factime: ', full_factime
+  write(*,*) 'jvstime: ', full_jvstime
+  write(*,*) 'waxpytime: ', full_waxpytime
 
   ! -------------------------------------------------------------------------- !
   ! 3. Run the compacted mechanism
@@ -231,11 +244,22 @@ program main
   DO_FUN = tDO_FUN
   DO_JVS = tDO_JVS
 
+   comp_funtime = 0.
+   comp_factime = 0.
+   comp_rostime = 0.
+   comp_jvstime = 0.
+   comp_waxpytime = 0.
+
 !  call fullmech()
   call compactedmech()
   DO i=1,NVAR
      write(*,*) SPC_NAMES(i), C(i)
   END DO
+  write(*,*) 'rostime: ', comp_rostime
+  write(*,*) 'funtime: ', comp_funtime
+  write(*,*) 'factime: ', comp_factime
+  write(*,*) 'jvstime: ', comp_jvstime
+  write(*,*) 'waxpytime: ', comp_waxpytime
 
   ! -------------------------------------------------------------------------- !
   ! 4. (optional) Calculate the error norm per Santillana et al. (2010) and

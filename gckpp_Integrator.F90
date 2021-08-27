@@ -539,8 +539,11 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    H = MIN(H,ABS(Tend-T))
 
 !~~~>   Compute the function at current time
-   CALL FunTemplate(T,Y,Fcn0)
+   call cpu_time(start1)
+   CALL FunTemplate(T,Y,Fcn0) ! Reacts to DO_FUN()
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
+   call cpu_time(end1)
+   full_funtime = full_funtime+end1-start1
 
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
@@ -549,20 +552,28 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    END IF
 
 !~~~>   Compute the Jacobian at current time
-   CALL JacTemplate(T,Y,Jac0)
+   call cpu_time(start1)
+   CALL JacTemplate(T,Y,Jac0) ! Reacts to DO_JVS()
    ISTATUS(Njac) = ISTATUS(Njac) + 1
+   call cpu_time(end1)
+   full_jvstime = full_jvstime+end1-start1
 
 !~~~>  Repeat step calculation until current step accepted
 UntilAccepted: DO
-
+   
+   call cpu_time(start1)
    CALL ros_PrepareMatrix(H,Direction,ros_Gamma(1), &
           Jac0,Ghimj,Pivot,Singular)
+   call cpu_time(end1)
+   full_factime = full_factime+end1-start1
+
    IF (Singular) THEN ! More than 5 consecutive failed decompositions
        CALL ros_ErrorMsg(-8,T,H,IERR)
        RETURN
    END IF
 
 !~~~>   Compute the stages
+   call cpu_time(start1)
 Stage: DO istage = 1, ros_S
 
       ! Current istage offset. Current istage vector is K(ioffset+1:ioffset+N)
@@ -577,33 +588,49 @@ Stage: DO istage = 1, ros_S
          !slim: CALL WCOPY(N,Y,1,Ynew,1)
 	 Ynew(1:N) = Y(1:N)
          DO j = 1, istage-1
-           CALL WAXPY(N,ros_A((istage-1)*(istage-2)/2+j), &
+            call cpu_time(start2)
+            CALL WAXPY(N,ros_A((istage-1)*(istage-2)/2+j), &
             K(N*(j-1)+1),1,Ynew,1)
+            call cpu_time(end2)
+            full_waxpytime = full_waxpytime+end2-start2
          END DO
          Tau = T + ros_Alpha(istage)*Direction*H
+         call cpu_time(start2)
          CALL FunTemplate(Tau,Ynew,Fcn)
          ISTATUS(Nfun) = ISTATUS(Nfun) + 1
+         call cpu_time(end2)
+         full_funtime = full_funtime+end2-start2
        END IF ! if istage == 1 elseif ros_NewF(istage)
        !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
        K(ioffset+1:ioffset+N) = Fcn(1:N)
        DO j = 1, istage-1
          HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
+         call cpu_time(start2)
          CALL WAXPY(N,HC,K(N*(j-1)+1),1,K(ioffset+1),1)
+         call cpu_time(end2)
+         full_waxpytime = full_waxpytime+end2-start2
        END DO
        IF ((.NOT. Autonomous).AND.(ros_Gamma(istage).NE.ZERO)) THEN
          HG = Direction*H*ros_Gamma(istage)
+         call cpu_time(start2)
          CALL WAXPY(N,HG,dFdT,1,K(ioffset+1),1)
+         call cpu_time(end2)
+         full_waxpytime = full_waxpytime+end2-start2
        END IF
        CALL ros_Solve(Ghimj, Pivot, K(ioffset+1))
 
    END DO Stage
-
+   call cpu_time(end1)
+   full_rostime = full_rostime+end1-start1
 
 !~~~>  Compute the new solution
    !slim: CALL WCOPY(N,Y,1,Ynew,1)
    Ynew(1:N) = Y(1:N)
    DO j=1,ros_S
-         CALL WAXPY(N,ros_M(j),K(N*(j-1)+1),1,Ynew,1)
+      call cpu_time(start2)
+      CALL WAXPY(N,ros_M(j),K(N*(j-1)+1),1,Ynew,1)
+      call cpu_time(end2)
+      full_waxpytime = full_waxpytime+end2-start2
    END DO
 
 !~~~>  Compute the error estimation

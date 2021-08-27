@@ -524,7 +524,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
    RejectMoreH=.FALSE.
 
 !~~~> Time loop begins below
-
+   
 TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
        .OR. (Direction < 0).AND.((Tend-T)+Roundoff <= ZERO) )
 
@@ -541,9 +541,12 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    H = MIN(H,ABS(Tend-T))
 
 !~~~>   Compute the function at current time
+   call cpu_time(start1)
    CALL FunTemplate(T,Y,Fcn0) ! Reacts to DO_FUN()
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
-   
+   call cpu_time(end1)
+   comp_funtime = comp_funtime+end1-start1
+
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
       CALL ros_FunTimeDerivative ( T, Roundoff, Y, &
@@ -551,14 +554,20 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    END IF
 
 !~~~>   Compute the Jacobian at current time
+   call cpu_time(start1)
    CALL JacTemplate(T,Y,Jac0) ! Reacts to DO_JVS()
    ISTATUS(Njac) = ISTATUS(Njac) + 1
+   call cpu_time(end1)
+   comp_jvstime = comp_jvstime+end1-start1
 
 !~~~>  Repeat step calculation until current step accepted
 UntilAccepted: DO
 
+   call cpu_time(start1)
    CALL ros_PrepareMatrix(H,Direction,ros_Gamma(1), &
           Jac0,Ghimj,Pivot,Singular) ! Note, not Ghimj(LU_NONZERO), above it's Ghimj(cNONZERO)
+   call cpu_time(end1)
+   comp_factime = comp_factime+end1-start1
 
    IF (Singular) THEN ! More than 5 consecutive failed decompositions
        CALL ros_ErrorMsg(-8,T,H,IERR)
@@ -566,6 +575,7 @@ UntilAccepted: DO
    END IF
 
 !~~~>   Compute the stages
+   call cpu_time(start1)
 Stage: DO istage = 1, ros_S
 
       ! Current istage offset. Current istage vector is K(ioffset+1:ioffset+N)
@@ -587,28 +597,41 @@ Stage: DO istage = 1, ros_S
             !Ynew(SPC_MAP) = Ysub
 ! --- Option 2: This one seems slightly faster than option 1.
 !               See cWAXPY below.
+            call cpu_time(start2)
             CALL cWAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
                  K(rNVAR*(j-1)+1),1,Ynew,1,NVAR,SPC_MAP)
+            call cpu_time(end2)
+            comp_waxpytime = comp_waxpytime+end2-start2
 ! --- --- ---
          END DO
          Tau = T + ros_Alpha(istage)*Direction*H
+         call cpu_time(start2)
          CALL FunTemplate(Tau,Ynew,Fcn)
          ISTATUS(Nfun) = ISTATUS(Nfun) + 1
+         call cpu_time(end2)
+         comp_funtime = comp_funtime+end2-start2
        END IF ! if istage == 1 elseif ros_NewF(istage)
        !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
        K(ioffset+1:ioffset+rNVAR) = Fcn(SPC_MAP)
        DO j = 1, istage-1
          HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
+         call cpu_time(start2)
          CALL WAXPY(rNVAR,HC,K(rNVAR*(j-1)+1),1,K(ioffset+1),1)
+         call cpu_time(end2)
+         comp_waxpytime = comp_waxpytime+end2-start2
       END DO
        IF ((.NOT. Autonomous).AND.(ros_Gamma(istage).NE.ZERO)) THEN
          HG = Direction*H*ros_Gamma(istage)
+         call cpu_time(start2)
          CALL WAXPY(rNVAR,HG,dFdT,1,K(ioffset+1),1)
+         call cpu_time(end2)
+         comp_waxpytime = comp_waxpytime+end2-start2
        END IF
        CALL ros_Solve(Ghimj, Pivot, K(ioffset+1))
 
    END DO Stage
-
+   call cpu_time(end1)
+   comp_rostime = comp_rostime+end1-start1
 
 !~~~>  Compute the new solution
    !slim: CALL WCOPY(N,Y,1,Ynew,1)
@@ -623,7 +646,10 @@ Stage: DO istage = 1, ros_S
 
 ! --- Option 2: This one seems slightly faster than option 1.
    DO j=1,ros_S
-         CALL cWAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ynew,1,NVAR,SPC_MAP)
+      call cpu_time(start2)
+      CALL cWAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ynew,1,NVAR,SPC_MAP)
+      call cpu_time(end2)
+      comp_waxpytime = comp_waxpytime+end2-start2
    END DO
 ! --- --- ---
 

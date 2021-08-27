@@ -70,6 +70,9 @@ MODULE gckpp_Global
 
 ! INLINED global variable declarations
 
+      real(kind=dp) :: full_funtime, full_factime, full_rostime, full_jvstime, full_waxpytime
+      real(kind=dp) :: comp_funtime, comp_factime, comp_rostime, comp_jvstime, comp_waxpytime
+      real(kind=dp) :: start1, start2, start3, start4, end1, end2, end3, end4
 
 END MODULE gckpp_Global
 
