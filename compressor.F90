@@ -25,8 +25,8 @@ program main
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
-  NITR = 1
-  NAVG = 1
+  NITR = 1000
+  NAVG = 20
 
   ALLOCATE(DO_SLV(NVAR+1))  ! Yes/no (1/0), Used to control KppSolve()
   ALLOCATE(DO_FUN(NVAR)  )  ! Yes/no (1/0), Used to control Fun()
@@ -39,15 +39,7 @@ program main
   cNONZERO = 0 ! Initialize number of nonzero elements in reduced mechanism
 
   ! -------------------------------------------------------------------------- !
-  ! 1. Run the full mechanism
-
-  call fullmech()
-  DO i=1,NVAR
-     write(*,*) SPC_NAMES(i), C(i)
-  END DO
-
-  ! -------------------------------------------------------------------------- !
-  ! 2. Reconstruct the sparse data for a reduced mechanism
+  ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
 
   NRMV     = 1 ! Remove 1 species for testing. This would be determined online.
@@ -203,6 +195,14 @@ program main
 !  write(*,*) ' '
 !  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
   write(*,'(a,'//lunz//'i4)') ' DO_JVS:   ', DO_JVS
+
+  ! -------------------------------------------------------------------------- !
+  ! 2. Run the full mechanism
+
+  call fullmech()
+  DO i=1,NVAR
+     write(*,*) SPC_NAMES(i), C(i)
+  END DO
 
   ! -------------------------------------------------------------------------- !
   ! 3. Run the compacted mechanism

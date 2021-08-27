@@ -580,10 +580,16 @@ Stage: DO istage = 1, ros_S
          !slim: CALL WCOPY(N,Y,1,Ynew,1)
 	 Ynew(1:N) = Y(1:N)
          DO j = 1, istage-1
-            Ysub = Ynew(SPC_MAP)
-            CALL WAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
-                 K(rNVAR*(j-1)+1),1,Ysub,1)
-            Ynew(SPC_MAP) = Ysub
+! --- Option 1: This one seems slightly slower than option 2.
+!            Ysub = Ynew(SPC_MAP)
+!            CALL WAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
+!                 K(rNVAR*(j-1)+1),1,Ysub,1)
+!            Ynew(SPC_MAP) = Ysub
+! --- Option 2: This one seems slightly faster than option 1.
+!               See cWAXPY below.
+            CALL cWAXPY(rNVAR,ros_A((istage-1)*(istage-2)/2+j), &
+                 K(rNVAR*(j-1)+1),1,Ynew,1,NVAR,SPC_MAP)
+! --- --- ---
          END DO
          Tau = T + ros_Alpha(istage)*Direction*H
          CALL FunTemplate(Tau,Ynew,Fcn)
@@ -607,11 +613,19 @@ Stage: DO istage = 1, ros_S
 !~~~>  Compute the new solution
    !slim: CALL WCOPY(N,Y,1,Ynew,1)
    Ynew(1:N) = Y(1:N)
-   Ysub = Ynew(SPC_MAP)
+
+! --- Option 1: This one seems slightly slower than option 2.
+!   Ysub = Ynew(SPC_MAP)
+!   DO j=1,ros_S
+!         CALL cWAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ysub,1)
+!   END DO
+!   Ynew(SPC_MAP) = Ysub
+
+! --- Option 2: This one seems slightly faster than option 1.
    DO j=1,ros_S
-         CALL WAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ysub,1)
+         CALL cWAXPY(rNVAR,ros_M(j),K(rNVAR*(j-1)+1),1,Ynew,1,NVAR,SPC_MAP)
    END DO
-   Ynew(SPC_MAP) = Ysub
+! --- --- ---
 
 !~~~>  Compute the error estimation
    !slim: CALL WSCAL(N,ZERO,Yerr,1)
@@ -1402,6 +1416,45 @@ SUBROUTINE cKppDecomp( JVS, IER )
       END DO
       
 END SUBROUTINE cKppDecomp
+
+!--------------------------------------------------------------
+SUBROUTINE cWAXPY(N,Alpha,X,incX,Y,incY,fN,indx)
+!--------------------------------------------------------------
+!     constant times a vector plus a vector: y <- y + Alpha*x
+!     only for incX=incY=1
+!     after BLAS
+!     replace this by the function from the optimized BLAS implementation:
+!         CALL SAXPY(N,Alpha,X,1,Y,1) or  CALL DAXPY(N,Alpha,X,1,Y,1)
+!
+!     Revision:
+!     -- Aug. 27, 2021: Added fN and indx as arguments to permit 
+!        subsetting Y as required to preserve the length of Y 
+!        and minimze array copying.
+!--------------------------------------------------------------
+
+  INTEGER  :: i,incX,incY,M,MP1,N,fN,indx(N)
+  REAL(kind=dp) :: X(N),Y(fN),Alpha
+  REAL(kind=dp), PARAMETER :: ZERO = 0.0_dp
+  
+  IF (Alpha .EQ. ZERO) RETURN
+  IF (N .LE. 0) RETURN
+  
+  M = MOD(N,4)
+  IF( M .NE. 0 ) THEN
+     DO i = 1,M
+        Y(indx(i)) = Y(indx(i)) + Alpha*X(i)
+     END DO
+     IF( N .LT. 4 ) RETURN
+  END IF
+  MP1 = M + 1
+  DO i = MP1,N,4
+     Y(indx(i))     = Y(indx(i)) + Alpha*X(i)
+     Y(indx(i + 1)) = Y(indx(i + 1)) + Alpha*X(i + 1)
+     Y(indx(i + 2)) = Y(indx(i + 2)) + Alpha*X(i + 2)
+     Y(indx(i + 3)) = Y(indx(i + 3)) + Alpha*X(i + 3)
+  END DO
+  
+END SUBROUTINE cWAXPY
 
 END MODULE compact_Integrator
 
