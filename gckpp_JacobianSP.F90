@@ -29,17 +29,27 @@ MODULE gckpp_JacobianSP
 ! Sparse Jacobian Data
 
 
-  INTEGER, PARAMETER, DIMENSION(9) :: LU_IROW = (/ &
-       1,  2,  2,  2,  3,  3,  3,  4,  4 /)
+  INTEGER, PARAMETER, DIMENSION(53) :: LU_IROW = (/ &
+       1,  1,  1,  2,  2,  2,  3,  3,  3,  3,  4,  4, & ! index 1 - 12
+       5,  5,  5,  6,  6,  6,  7,  7,  7,  7,  7,  8, & ! index 13 - 24
+       8,  8,  8,  8,  8,  8,  8,  8,  9,  9,  9,  9, & ! index 25 - 36
+       9,  9,  9,  9, 10, 10, 10, 10, 11, 11, 11, 11, & ! index 37 - 48
+      12, 12, 12, 12, 12 /)
 
-  INTEGER, PARAMETER, DIMENSION(9) :: LU_ICOL = (/ &
-       1,  2,  3,  4,  1,  3,  4,  3,  4 /)
+  INTEGER, PARAMETER, DIMENSION(53) :: LU_ICOL = (/ &
+       1,  5,  8,  2,  8, 12,  3,  6,  8,  9,  4,  8, & ! index 1 - 12
+       4,  5,  8,  6,  8,  9,  7,  8,  9, 10, 11,  4, & ! index 13 - 24
+       5,  6,  7,  8,  9, 10, 11, 12,  4,  5,  6,  8, & ! index 25 - 36
+       9, 10, 11, 12,  9, 10, 11, 12,  9, 10, 11, 12, & ! index 37 - 48
+       8,  9, 10, 11, 12 /)
 
-  INTEGER, PARAMETER, DIMENSION(5) :: LU_CROW = (/ &
-       1,  2,  5,  8, 10 /)
+  INTEGER, PARAMETER, DIMENSION(13) :: LU_CROW = (/ &
+       1,  4,  7, 11, 13, 16, 19, 24, 33, 41, 45, 49, & ! index 1 - 12
+      54 /)
 
-  INTEGER, PARAMETER, DIMENSION(5) :: LU_DIAG = (/ &
-       1,  2,  6,  9, 10 /)
+  INTEGER, PARAMETER, DIMENSION(13) :: LU_DIAG = (/ &
+       1,  4,  7, 11, 14, 16, 19, 28, 37, 42, 47, 53, & ! index 1 - 12
+      54 /)
 
   LOGICAL, ALLOCATABLE :: DO_JVS(:)
   LOGICAL, ALLOCATABLE :: DO_SLV(:)

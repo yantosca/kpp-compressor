@@ -644,18 +644,42 @@ SUBROUTINE KppSolve ( JVS, X )
 ! X - Vector for variables
   REAL(kind=dp) :: X(NVAR)
 
-IF (DO_SLV(3)) &
-  X(3) = X(3)-JVS(5)*X(1)
+IF (DO_SLV(5)) &
+  X(5) = X(5)-JVS(13)*X(4)
+IF (DO_SLV(8)) &
+  X(8) = X(8)-JVS(24)*X(4)-JVS(25)*X(5)-JVS(26)*X(6)-JVS(27)*X(7)
+IF (DO_SLV(9)) &
+  X(9) = X(9)-JVS(33)*X(4)-JVS(34)*X(5)-JVS(35)*X(6)-JVS(36)*X(8)
+IF (DO_SLV(10)) &
+  X(10) = X(10)-JVS(41)*X(9)
+IF (DO_SLV(11)) &
+  X(11) = X(11)-JVS(45)*X(9)-JVS(46)*X(10)
+IF (DO_SLV(12)) &
+  X(12) = X(12)-JVS(49)*X(8)-JVS(50)*X(9)-JVS(51)*X(10)-JVS(52)*X(11)
+IF (DO_SLV(12)) &
+  X(12) = X(12)/JVS(53)
+IF (DO_SLV(11)) &
+  X(11) = (X(11)-JVS(48)*X(12))/(JVS(47))
+IF (DO_SLV(10)) &
+  X(10) = (X(10)-JVS(43)*X(11)-JVS(44)*X(12))/(JVS(42))
+IF (DO_SLV(9)) &
+  X(9) = (X(9)-JVS(38)*X(10)-JVS(39)*X(11)-JVS(40)*X(12))/(JVS(37))
+IF (DO_SLV(8)) &
+  X(8) = (X(8)-JVS(29)*X(9)-JVS(30)*X(10)-JVS(31)*X(11)-JVS(32)*X(12))/(JVS(28))
+IF (DO_SLV(7)) &
+  X(7) = (X(7)-JVS(20)*X(8)-JVS(21)*X(9)-JVS(22)*X(10)-JVS(23)*X(11))/(JVS(19))
+IF (DO_SLV(6)) &
+  X(6) = (X(6)-JVS(17)*X(8)-JVS(18)*X(9))/(JVS(16))
+IF (DO_SLV(5)) &
+  X(5) = (X(5)-JVS(15)*X(8))/(JVS(14))
 IF (DO_SLV(4)) &
-  X(4) = X(4)-JVS(8)*X(3)
-IF (DO_SLV(4)) &
-  X(4) = X(4)/JVS(9)
+  X(4) = (X(4)-JVS(12)*X(8))/(JVS(11))
 IF (DO_SLV(3)) &
-  X(3) = (X(3)-JVS(7)*X(4))/(JVS(6))
+  X(3) = (X(3)-JVS(8)*X(6)-JVS(9)*X(8)-JVS(10)*X(9))/(JVS(7))
 IF (DO_SLV(2)) &
-  X(2) = (X(2)-JVS(3)*X(3)-JVS(4)*X(4))/(JVS(2))
+  X(2) = (X(2)-JVS(5)*X(8)-JVS(6)*X(12))/(JVS(4))
 IF (DO_SLV(1)) &
-  X(1) = X(1)/JVS(1)
+  X(1) = (X(1)-JVS(2)*X(5)-JVS(3)*X(8))/(JVS(1))
       
 END SUBROUTINE KppSolve
 
@@ -683,13 +707,30 @@ SUBROUTINE KppSolveTR ( JVS, X, XX )
   REAL(kind=dp) :: XX(NVAR)
 
   XX(1) = X(1)/JVS(1)
-  XX(2) = X(2)/JVS(2)
-  XX(3) = (X(3)-JVS(3)*XX(2))/(JVS(6))
-  XX(4) = (X(4)-JVS(4)*XX(2)-JVS(7)*XX(3))/(JVS(9))
-  XX(4) = XX(4)
-  XX(3) = XX(3)-JVS(8)*XX(4)
+  XX(2) = X(2)/JVS(4)
+  XX(3) = X(3)/JVS(7)
+  XX(4) = X(4)/JVS(11)
+  XX(5) = (X(5)-JVS(2)*XX(1))/(JVS(14))
+  XX(6) = (X(6)-JVS(8)*XX(3))/(JVS(16))
+  XX(7) = X(7)/JVS(19)
+  XX(8) = (X(8)-JVS(3)*XX(1)-JVS(5)*XX(2)-JVS(9)*XX(3)-JVS(12)*XX(4)-JVS(15)*XX(5)-JVS(17)*XX(6)-JVS(20)*XX(7))&
+            &/(JVS(28))
+  XX(9) = (X(9)-JVS(10)*XX(3)-JVS(18)*XX(6)-JVS(21)*XX(7)-JVS(29)*XX(8))/(JVS(37))
+  XX(10) = (X(10)-JVS(22)*XX(7)-JVS(30)*XX(8)-JVS(38)*XX(9))/(JVS(42))
+  XX(11) = (X(11)-JVS(23)*XX(7)-JVS(31)*XX(8)-JVS(39)*XX(9)-JVS(43)*XX(10))/(JVS(47))
+  XX(12) = (X(12)-JVS(6)*XX(2)-JVS(32)*XX(8)-JVS(40)*XX(9)-JVS(44)*XX(10)-JVS(48)*XX(11))/(JVS(53))
+  XX(12) = XX(12)
+  XX(11) = XX(11)-JVS(52)*XX(12)
+  XX(10) = XX(10)-JVS(46)*XX(11)-JVS(51)*XX(12)
+  XX(9) = XX(9)-JVS(41)*XX(10)-JVS(45)*XX(11)-JVS(50)*XX(12)
+  XX(8) = XX(8)-JVS(36)*XX(9)-JVS(49)*XX(12)
+  XX(7) = XX(7)-JVS(27)*XX(8)
+  XX(6) = XX(6)-JVS(26)*XX(8)-JVS(35)*XX(9)
+  XX(5) = XX(5)-JVS(25)*XX(8)-JVS(34)*XX(9)
+  XX(4) = XX(4)-JVS(13)*XX(5)-JVS(24)*XX(8)-JVS(33)*XX(9)
+  XX(3) = XX(3)
   XX(2) = XX(2)
-  XX(1) = XX(1)-JVS(5)*XX(3)
+  XX(1) = XX(1)
       
 END SUBROUTINE KppSolveTR
 

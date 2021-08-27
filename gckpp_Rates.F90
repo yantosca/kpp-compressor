@@ -188,8 +188,18 @@ SUBROUTINE Update_RCONST ( )
 
 ! End INLINED RCONST
 
-  RCONST(1) = (R(1))
-  RCONST(2) = (R(2))
+  RCONST(1) = (5.0d-8)
+  RCONST(2) = (1.2d-14)
+  RCONST(3) = (2.4d-13)
+  RCONST(4) = (9.2d-12)
+  RCONST(5) = (3.3d-3)
+  RCONST(6) = (2.0d-12)
+  RCONST(7) = (2.7d-6)
+  RCONST(8) = (3.8d-15)
+  RCONST(9) = (1.7d-12)
+  RCONST(10) = (1.8d-15)
+  RCONST(11) = (1.2d-10)
+  RCONST(12) = (1.0d-11)
       
 END SUBROUTINE Update_RCONST
 
@@ -209,6 +219,9 @@ SUBROUTINE Update_PHOTO ( )
 
    USE gckpp_Global
 
+  RCONST(1) = (5.0d-8)
+  RCONST(5) = (3.3d-3)
+  RCONST(7) = (2.7d-6)
       
 END SUBROUTINE Update_PHOTO
 

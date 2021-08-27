@@ -54,7 +54,7 @@ program main
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
 
-  NRMV     = 2 ! Remove 1 species for testing. This would be determined online.
+  NRMV     = 5 ! Remove 1 species for testing. This would be determined online.
   rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
 
   ! ALLOCATE
@@ -62,7 +62,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(:) = (/ind_A, ind_B/) ! Species
+  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_CO,ind_H2O2/) ! Species
 
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -74,7 +74,7 @@ program main
   ! -- -- Loop through vectors
   ! -- -- -- Count the number of nonzero elements in the reduced
   ! Jacobian
-  DO i = 1,NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
+  DO i = 1,LU_NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
 !  DO S = 1,NRMV
      IF (.not.(ANY(REMOVE.eq.LU_IROW(i)).or.ANY(REMOVE.eq.LU_ICOL(i)))) THEN
         cNONZERO = cNONZERO+1
@@ -92,8 +92,8 @@ program main
 
   ALLOCATE(rLU_IROW(LU_NONZERO))
   ALLOCATE(rLU_ICOL(LU_NONZERO))
-  rLU_IROW = 0
-  rLU_ICOL = 0
+  rLU_IROW = -999
+  rLU_ICOL = -999
 
   ! -- -- Set up SPC_MAP() to map full-mech Fcn to compressed Fcn
   S = 1 ! rNVAR index
@@ -108,7 +108,7 @@ program main
   ! -- -- -- recompute LU_IROW
   ! -- -- -- recompute LU_ICOL
   idx = 0
-  DO i = 1,NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
+  DO i = 1,LU_NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
      ! Remove row & column elements of deactivated species
      ! Populate cLU_IROW & cLU_ICOL
      IF (ANY(REMOVE.eq.LU_IROW(i)).or.ANY(REMOVE.eq.LU_ICOL(i))) THEN
