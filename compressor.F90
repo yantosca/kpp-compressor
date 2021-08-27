@@ -54,7 +54,7 @@ program main
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
 
-  NRMV     = 1 ! Remove 1 species for testing. This would be determined online.
+  NRMV     = 2 ! Remove 1 species for testing. This would be determined online.
   rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
 
   ! ALLOCATE
@@ -62,7 +62,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(:) = (/ind_A/) ! Species
+  REMOVE(:) = (/ind_A, ind_B/) ! Species
 
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -74,10 +74,12 @@ program main
   ! -- -- Loop through vectors
   ! -- -- -- Count the number of nonzero elements in the reduced
   ! Jacobian
-  DO S = 1,NRMV
   DO i = 1,NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
-     IF (LU_IROW(i).ne.REMOVE(S).and.LU_ICOL(i).ne.REMOVE(S)) cNONZERO = cNONZERO+1
-  ENDDO
+!  DO S = 1,NRMV
+     IF (.not.(ANY(REMOVE.eq.LU_IROW(i)).or.ANY(REMOVE.eq.LU_ICOL(i)))) THEN
+        cNONZERO = cNONZERO+1
+     ENDIF
+!  ENDDO
   ENDDO
 
   ! -- -- -- Allocate the new Jacobian elements based on new non-zero elements
@@ -103,16 +105,16 @@ program main
      ENDIF
   ENDDO
 
-  write(*,*) '<<>> ', iSPC_MAP
-
   ! -- -- -- recompute LU_IROW
   ! -- -- -- recompute LU_ICOL
-  DO S=1,size(REMOVE)
   idx = 0
   DO i = 1,NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
      ! Remove row & column elements of deactivated species
      ! Populate cLU_IROW & cLU_ICOL
-     IF (LU_IROW(i).ne.REMOVE(S).and.LU_ICOL(i).ne.REMOVE(S)) THEN
+     IF (ANY(REMOVE.eq.LU_IROW(i)).or.ANY(REMOVE.eq.LU_ICOL(i))) THEN
+        rLU_ICOL(i) = 0
+        rLU_IROW(i) = 0
+     ELSE
         idx=idx+1
         cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
         rLU_IROW(i)   = LU_IROW(i)
@@ -124,7 +126,6 @@ program main
      IF (LU_IROW(i).eq.REMOVE(S).or.LU_ICOL(i).eq.REMOVE(S)) THEN
         tDO_JVS(i) = .false. ! Turn off this term in Jac_SP()
      ENDIF
-  ENDDO
   ENDDO
 
   cLU_CROW(1) = 1 ! 1st index = 1
