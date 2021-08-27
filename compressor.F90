@@ -22,7 +22,10 @@ program main
 
   INTEGER, ALLOCATABLE :: rLU_IROW(:), rLU_ICOL(:) ! temporary, for display purposes
 
-  NITR = 100000
+  ! Formatting vars
+  character(len=20) :: lunz, nv, clunz, cnv
+
+  NITR = 1
   NAVG = 1
 
   ALLOCATE(DO_SLV(NVAR+1))  ! Yes/no (1/0), Used to control KppSolve()
@@ -151,6 +154,12 @@ program main
   cLU_CROW(rNVAR+1) = cNONZERO+1
   cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
 
+  ! Initialize formatting values
+  write(lunz,*) LU_NONZERO
+  write(nv,*) NVAR+1
+  write(clunz,*) cNONZERO
+  write(cnv,*) rNVAR+1
+
 !  write(*,*) 'cNONZERO: ', cNONZERO
   write(*,*) ' '
   write(*,*) 'Species Info:'
@@ -161,39 +170,39 @@ program main
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Full-mech sparse data: '
-  write(*,*) 'LU_IROW:  ', LU_IROW
-  write(*,*) 'LU_ICOL:  ', LU_ICOL
-  write(*,*) 'LU_CROW:  ', LU_CROW
-  write(*,*) 'LU_DIAG:  ', LU_DIAG
+  write(*,'(a,'//lunz//'i4)') ' LU_IROW:  ', LU_IROW
+  write(*,'(a,'//lunz//'i4)') ' LU_ICOL:  ', LU_ICOL
+  write(*,'(a,'//nv//'i4)') ' LU_CROW:  ', LU_CROW
+  write(*,'(a,'//nv//'i4)') ' LU_DIAG:  ', LU_DIAG
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Reduced-mech, uncompacted sparse data: '
   write(*,*) '-- removes species ' // SPC_NAMES(REMOVE(:))! // ' with index ', REMOVE(:)
-  write(*,*) 'rLU_IROW: ', rLU_IROW
-  write(*,*) 'rLU_ICOL: ', rLU_ICOL
+  write(*,'(a,'//lunz//'i4)') ' rLU_IROW: ', rLU_IROW
+  write(*,'(a,'//lunz//'i4)') ' rLU_ICOL: ', rLU_ICOL
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Compacted sparse data: '
-  write(*,*) 'cLU_IROW: ', cLU_IROW
-  write(*,*) 'cLU_ICOL: ', cLU_ICOL
-  write(*,*) 'cLU_CROW: ', cLU_CROW
-  write(*,*) 'cLU_DIAG: ', cLU_DIAG
+  write(*,'(a,'//clunz//'i4)') ' cLU_IROW: ', cLU_IROW
+  write(*,'(a,'//clunz//'i4)') ' cLU_ICOL: ', cLU_ICOL
+  write(*,'(a,'//cnv//'i4)') ' cLU_CROW: ', cLU_CROW
+  write(*,'(a,'//cnv//'i4)') ' cLU_DIAG: ', cLU_DIAG
   write(*,*) '---------------'
   write(*,*) ' '
 !  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
-  write(*,*) 'JVS_MAP: ', JVS_MAP
+  write(*,'(a,'//clunz//'i4)') ' JVS_MAP:  ', JVS_MAP
 !  write(*,*) ' '
 !  write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
-  write(*,*) 'SPC_MAP: ', SPC_MAP
+  write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
 !  write(*,*) ' '
 !  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
-  write(*,*) 'DO_SLV:  ', DO_SLV
+  write(*,'(a,'//nv//'i4)') ' DO_SLV:   ', DO_SLV
 !  write(*,*) ' '
 !  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
-  write(*,*) 'DO_FUN:  ', DO_FUN
+  write(*,'(a,'//nv//'i4)') ' DO_FUN:   ', DO_FUN
 !  write(*,*) ' '
 !  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
-  write(*,*) 'DO_JVS:  ', DO_JVS
+  write(*,'(a,'//lunz//'i4)') ' DO_JVS:   ', DO_JVS
 
   ! -------------------------------------------------------------------------- !
   ! 3. Run the compacted mechanism
