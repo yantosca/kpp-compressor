@@ -10,7 +10,7 @@ program main
   REAL(dp)               :: RCNTRL(20)
   REAL(dp)               :: RSTATE(20)
   REAL(dp)               :: T, TIN, TOUT, start, end
-  REAL :: full_sumtime, comp_sumtime, compact_avg, full_avg
+  REAL :: full_sumtime, comp_sumtime, compact_avg, full_avg, setup_time
 
   ! COMPACTION
   INTEGER, ALLOCATABLE :: REMOVE(:)    ! Vector of species indexes to be removed from full mechanism
@@ -38,6 +38,8 @@ program main
   ALLOCATE(DO_FUN(NVAR)  )  ! Yes/no (1/0), Used to control Fun()
   ALLOCATE(DO_JVS(LU_NONZERO)) ! Yes/No (1/0), compute term, used to control Jac_SP()
 
+  call cpu_time(start)
+
   ! Temporoary settings.
   DO_SLV   = .true. ! Compute all in KppSolve()
   DO_FUN   = .true. ! Compute all in Fun()
@@ -54,7 +56,7 @@ program main
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
 
-  NRMV     = 6 ! Remove 1 species for testing. This would be determined online.
+  NRMV     = 7 ! Remove 1 species for testing. This would be determined online.
   rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
 
   ! ALLOCATE
@@ -62,7 +64,7 @@ program main
 
   ! -- remove row & column
   ! -- -- Which species are zeroed?
-  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_H2O,ind_O2,ind_CO/) ! Species
+  REMOVE(:) = (/ind_CO2,ind_HNO3,ind_CH4,ind_H2O,ind_O2,ind_CO,ind_H2O2/) ! Species
 
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
@@ -150,6 +152,9 @@ program main
   cLU_CROW(rNVAR+1) = cNONZERO+1
   cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
 
+  call cpu_time(end)
+  setup_time = end-start
+
   ! Initialize formatting values
   write(lunz,*) LU_NONZERO
   write(nv,*) NVAR+1
@@ -199,6 +204,8 @@ program main
 !  write(*,*) ' '
 !  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
   write(*,'(a,'//lunz//'l4)') ' DO_JVS:   ', tDO_JVS
+  write(*,*) ' '
+  write(*,*) '  Setup time:', setup_time
 
   ! -------------------------------------------------------------------------- !
   ! 2. Run the full mechanism
