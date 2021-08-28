@@ -89,6 +89,7 @@ program main
         idx=idx+1
      endif
   ENDDO
+  write(*,*) 'NVAR: ', NVAR, '  rNVAR: ', rNVAR, '  ', dble(rNVAR)/dble(NVAR)
 
 
   ! -- remove row & column

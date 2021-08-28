@@ -466,7 +466,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !      defined by ros_S (no of stages)
 !      and its coefficients ros_{A,C,M,E,Alpha,Gamma}
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+   
    USE gckpp_JacobianSP, ONLY : cNONZERO, rNVAR
 
   IMPLICIT NONE
