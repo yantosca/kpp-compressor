@@ -100,7 +100,7 @@ SUBROUTINE cINTEGRATE( TIN, TOUT, &
    END IF
 
 
-   CALL Rosenbrock(NVAR,VAR,TIN,TOUT,   &
+   CALL cRosenbrock(NVAR,VAR,TIN,TOUT,   &
          ATOL,RTOL,                &
          RCNTRL,ICNTRL,RSTATUS,ISTATUS,IERR)
 
@@ -118,7 +118,7 @@ SUBROUTINE cINTEGRATE( TIN, TOUT, &
  END SUBROUTINE CINTEGRATE
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SUBROUTINE Rosenbrock(N,Y,Tstart,Tend, &
+SUBROUTINE cRosenbrock(N,Y,Tstart,Tend, &
            AbsTol,RelTol,              &
            RCNTRL,ICNTRL,RSTATUS,ISTATUS,IERR)
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -558,7 +558,7 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
 UntilAccepted: DO
 
    CALL ros_PrepareMatrix(H,Direction,ros_Gamma(1), &
-          Jac0,Ghimj,Pivot,Singular) ! Note, not Ghimj(LU_NONZERO), above it's Ghimj(cNONZERO)
+          Jac0,Ghimj,Pivot,Singular) ! Note, not Ghimj(LU_NONZERO), its sized Ghimj(cNONZERO)
 
    IF (Singular) THEN ! More than 5 consecutive failed decompositions
        CALL ros_ErrorMsg(-8,T,H,IERR)
@@ -597,6 +597,9 @@ Stage: DO istage = 1, ros_S
        END IF ! if istage == 1 elseif ros_NewF(istage)
        !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
        K(ioffset+1:ioffset+rNVAR) = Fcn(SPC_MAP)
+!      DO i = 1,rNVAR
+!       K(ioffset+i) = Fcn(SPC_MAP(i))
+!       ENDDO
        DO j = 1, istage-1
          HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
          CALL WAXPY(rNVAR,HC,K(rNVAR*(j-1)+1),1,K(ioffset+1),1)
@@ -630,11 +633,24 @@ Stage: DO istage = 1, ros_S
 !~~~>  Compute the error estimation
    !slim: CALL WSCAL(N,ZERO,Yerr,1)
    Yerr(1:N) = ZERO
-   Yerrsub = Yerr(SPC_MAP)
+   DO i = 1,rNVAR
+   Yerrsub(i) = Yerr(SPC_MAP(i))
+   ENDDO
+!   write(*,*) 'Yerrsub before'
+!   do i=1,NVAR
+!      write(*,*) Y(i)
+!   enddo
    DO j=1,ros_S
         CALL WAXPY(rNVAR,ros_E(j),K(rNVAR*(j-1)+1),1,Yerrsub,1)
    END DO
-   Yerr(SPC_MAP) = Yerrsub
+   DO i = 1,rNVAR
+   Yerr(SPC_MAP(i)) = Yerrsub(i)
+   ENDDO
+!   Yerr(SPC_MAP) = Yerrsub(1:rNVAR)
+!   write(*,*) 'Yerrsub after'
+!   do i=1,rNVAR
+!      write(*,*) Yerrsub(i)
+!   enddo
    Err = ros_ErrorNorm ( Y, Ynew, Yerr, AbsTol, RelTol, VectorTol )
 
 !~~~> New step size is bounded by FacMin <= Hnew/H <= FacMax
@@ -1305,7 +1321,7 @@ Stage: DO istage = 1, ros_S
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !   End of the set of internal Rosenbrock subroutines
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-END SUBROUTINE Rosenbrock
+END SUBROUTINE cRosenbrock
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

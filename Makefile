@@ -37,7 +37,7 @@ FC_HPUX    = f90
 FOPT_HPUX  = -O -u +Oall +check=on
 
 FC_GFORTRAN     = gfortran
-FOPT_GFORTRAN   = -cpp -O #-g -fbacktrace -fcheck=bounds
+FOPT_GFORTRAN   = -cpp #-g -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow #bounds
 
 # define FULL_ALGEBRA for non-sparse integration
 FC   = $(FC_$(COMPILER))
@@ -76,18 +76,21 @@ STOCHOBJ = gckpp_Stochastic.o
 MODSRC   = gckpp_Model.F90
 MODOBJ   = gckpp_Model.o
 
-INISRT   = gckpp_Initialize.F90
+INISRC   = gckpp_Initialize.F90
 INIOBJ 	 = gckpp_Initialize.o
 
-MAINSRC = compressor.F90   gckpp_Initialize.F90   gckpp_Integrator.F90 gckpp_Model.F90 compact_Integrator.F90
-MAINOBJ = compressor.o     gckpp_Initialize.o     gckpp_Integrator.o   gckpp_Model.o   compact_Integrator.o
+SFCSRC   = setquants.F90
+SFCOBJ   = setquants.o
+
+MAINSRC = compressor.F90   gckpp_Initialize.F90   gckpp_Integrator.F90 gckpp_Model.F90 compact_Integrator.F90 
+MAINOBJ = compressor.o     gckpp_Initialize.o     gckpp_Integrator.o    compact_Integrator.o
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # User: modify the line below to include only the
 #       objects needed by your application
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ALLOBJ = $(GENOBJ) $(JACOBJ) $(FUNOBJ)  $(HESOBJ) $(STMOBJ) \
-	 $(UTLOBJ) $(LAOBJ) $(MODOBJ) $(INIOBJ)
+	 $(UTLOBJ) $(LAOBJ) $(MODOBJ) $(INIOBJ) $(SFCOBJ)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # User: modify the line below to include only the
@@ -181,4 +184,7 @@ compact_Integrator.o: compact_Integrator.F90  $(ALLOBJ)
 	$(FC) $(FOPT) -c $<
 
 compressor.o: compressor.F90 $(ALLOBJ)
+	$(FC) $(FOPT) -c $<
+
+setquants.o: setquants.F90 gckpp_Parameters.o $(ALLOBJ)
 	$(FC) $(FOPT) -c $<
