@@ -29,13 +29,17 @@ program main
 
   REAL(dp)             :: dcdt(NVAR), RxR(NREACT), cinit(NSPEC), lim
 
+  LOGICAL              :: OUTPUT
+
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
-  NITR = 1
-  NAVG = 2
+  OUTPUT = .false.
 
-  lim = 1e-2
+  NITR = 5
+  NAVG = 1
+
+  lim = 1e2
 
   ALLOCATE(tDO_SLV(NVAR+1))
   ALLOCATE(tDO_FUN(NVAR))
@@ -59,12 +63,11 @@ program main
 
   iSPC_MAP = 0
 
-  RxR   = 0._dp
+  R     = 0._dp
   Cinit = 0._dp
 
-  call set_quants_uppertrop(dcdt,Cinit,RxR)
-
-  !where(R.gt.1e-7) R=0.
+!  call set_quants_uppertrop(dcdt,Cinit,R)
+  call set_quantssfc(dcdt,Cinit,R)
 
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
@@ -73,7 +76,6 @@ program main
   NRMV     = 0 ! Remove 1 species for testing. This would be determined online.
   do i=1,NVAR
      if (abs(dcdt(i)).le.lim) NRMV=NRMV+1
-!     if (abs(dcdt(i)).eq.0.) NRMV=NRMV+1
   ENDDO
   rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
 
@@ -81,10 +83,10 @@ program main
   ALLOCATE(REMOVE(NRMV))
 
   idx = 1
-  write(*,*) 'THESE SPECIES ARE INACTIVE: '
+  if (output) write(*,*) 'THESE SPECIES ARE INACTIVE: '
   do i=1,NVAR
      if (abs(dcdt(i)).le.lim) then
-        write(*,*) 'SPC: ', SPC_NAMES(i), dcdt(i)
+        if (output) write(*,*) 'SPC: ', SPC_NAMES(i), dcdt(i)
         REMOVE(idx)=i
         idx=idx+1
      endif
@@ -93,28 +95,21 @@ program main
 
 
   ! -- remove row & column
-  ! -- -- Which species are zeroed?
-
-
   ! -- DO_SLV, DO_FUN, and DO_JVS will not change size (remain NVAR & NONZERO)
   !    But the appropriate elements are set to zero, so the appropriate terms
   !    in KppSolve(), Fun() and Jac_SP() are not computed
 
   tDO_SLV(REMOVE(:)) = .false.
   tDO_FUN(REMOVE(:)) = .false.
-!  DO_SLV(REMOVE(:)) = .false.
-!  DO_FUN(REMOVE(:)) = .false.
 
   ! -- -- Loop through vectors
   ! -- -- -- Count the number of nonzero elements in the reduced
   ! Jacobian
   nonzerocount = 0
   DO i = 1,LU_NONZERO !NONZERO is the size of LU_ICOL & LU_IROW
-!  DO S = 1,NRMV
      IF (.not.(ANY(REMOVE.eq.LU_IROW(i)).or.ANY(REMOVE.eq.LU_ICOL(i)))) THEN
         nonzerocount = nonzerocount+1
      ENDIF
-!  ENDDO
   ENDDO
 
   cNONZERO = nonzerocount
@@ -190,57 +185,7 @@ program main
   call cpu_time(end)
   setup_time = end-start
 
-  ! Initialize formatting values
-  write(lunz,*) LU_NONZERO
-  write(nv,*) NVAR+1
-  write(clunz,*) cNONZERO
-  write(cnv,*) rNVAR+1
-
-!  write(*,*) 'cNONZERO: ', cNONZERO
-  write(*,*) ' '
-  write(*,*) 'Species Info:'
-  write(*,*) '---------------'
-  do i=1,nvar
-!     write(*,'(a,i3)') " Species "//trim(spc_names(i))//" has index: ", i
-  enddo
-!>>  write(*,*) '---------------'
-!>>  write(*,*) ' '
-!>>  write(*,*) 'Full-mech sparse data: '
-!>>  write(*,'(a,'//lunz//'i4)') ' LU_IROW:  ', LU_IROW
-!>>  write(*,'(a,'//lunz//'i4)') ' LU_ICOL:  ', LU_ICOL
-!>>  write(*,'(a,'//nv//'i4)') ' LU_CROW:  ', LU_CROW
-!>>  write(*,'(a,'//nv//'i4)') ' LU_DIAG:  ', LU_DIAG
-!>>  write(*,*) '---------------'
-!>>  write(*,*) ' '
-!>>  write(*,*) 'Reduced-mech, uncompacted sparse data: '
-!  write(*,*) '-- removes species ' // SPC_NAMES(REMOVE(:))! // ' with index ', REMOVE(:)
-!>>  write(*,'(a,'//lunz//'i4)') ' rLU_IROW: ', rLU_IROW
-!>>  write(*,'(a,'//lunz//'i4)') ' rLU_ICOL: ', rLU_ICOL
-!>>  write(*,*) '---------------'
-!>>  write(*,*) ' '
-!>>  write(*,*) 'Compacted sparse data: '
-!>>  write(*,'(a,'//clunz//'i4)') ' cLU_IROW: ', cLU_IROW
-!>>  write(*,'(a,'//clunz//'i4)') ' cLU_ICOL: ', cLU_ICOL
-!>>  write(*,'(a,'//cnv//'i4)') ' cLU_CROW: ', cLU_CROW
-!>>  write(*,'(a,'//cnv//'i4)') ' cLU_DIAG: ', cLU_DIAG
-!>>  write(*,*) '---------------'
-!>>  write(*,*) ' '
-!>>!  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
-!>>  write(*,'(a,'//clunz//'i4)') ' JVS_MAP:  ', JVS_MAP
-!>>!  write(*,*) ' '
-!>>!  write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
-!>>  write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
-!>>!  write(*,*) ' '
-!>>!  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
-!>>  write(*,'(a,'//nv//'l4)') ' DO_SLV:   ', tDO_SLV
-!>>!  write(*,*) ' '
-!>>!  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
-!>>  write(*,'(a,'//nv//'l4)') ' DO_FUN:   ', tDO_FUN
-!>>!  write(*,*) ' '
-!>>!  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
-!>>  write(*,'(a,'//lunz//'l4)') ' DO_JVS:   ', tDO_JVS
-  write(*,*) ' '
-  write(*,*) '  Setup time:', setup_time
+  IF (OUTPUT) call showoutput()
 
   ! -------------------------------------------------------------------------- !
   ! 2. Run the full mechanism
@@ -252,10 +197,11 @@ program main
   DO_SLV = .true.
   DO_JVS = .true.
 
-  call fullmech(NVAR,Cinit,RxR)
+  write(*,*) ' '
+  write(*,*) 'Running the full mechanism for initialization'
+  call fullmech() ! initialization run
 
-  call fullmech(NVAR,Cinit,RxR)
-!  call compactedmech()
+  call fullmech()
 !  DO i=1,NVAR
 !     write(*,*) SPC_NAMES(i), C(i), Cinit(i)
      write(*,*) SPC_NAMES(ind_O3), C(ind_O3), Cinit(ind_O3)
@@ -278,8 +224,7 @@ program main
   DO_FUN = tDO_FUN
   DO_JVS = tDO_JVS
 
-!  call fullmech()
-  call compactedmech(NVAR,Cinit,RxR)
+  call compactedmech()
 !  DO i=1,NVAR
      write(*,*) SPC_NAMES(ind_O3), C(ind_O3), Cinit(ind_O3)
      write(*,*) SPC_NAMES(ind_OH), C(ind_OH), Cinit(ind_OH)
@@ -295,12 +240,10 @@ program main
   ! -------------------------------------------------------------------------- !
 
   ! 5. Report timing comparison
-  ! XXXXX -- For some reason, the ratio below changes depending on which
-  !          integration is called first.
 
   write(*,'(a,f5.1,a)') ' compact/full: ', 100.*compact_avg/full_avg, "%" 
-!  write(*,'(a,f4.1,a)') ' problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
-!  write(*,'(a,f4.1,a)') ' non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
+  write(*,'(a,f5.1,a)') ' problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
+  write(*,'(a,f5.1,a)') ' non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
 
   DEALLOCATE(tDO_SLV)
   DEALLOCATE(tDO_FUN)
@@ -320,14 +263,13 @@ program main
 
 CONTAINS
 
-  subroutine fullmech( Nv, c_i, RxR )
+  subroutine fullmech( )
     USE GCKPP_INTEGRATOR
     USE GCKPP_RATES
     USE GCKPP_INITIALIZE
+
     IMPLICIT NONE
 
-    integer,  intent(in) :: Nv
-    real(dp), intent(in) :: c_i(Nv), RxR(NREACT)
     ! Set OPTIONS
     IERR      = 0                 ! Success or failure flag
     ISTATUS   = 0                 ! Rosenbrock output 
@@ -346,11 +288,9 @@ CONTAINS
     ! Set ENV
     T    = 0d0
     TIN  = T
-    TOUT = T + 600._dp
+    TOUT = T + 3600._dp
     TEMP = 298.
     
-    R(1:NREACT) = RxR(1:NREACT)
-
     write(*,*) ' '
     write(*,*) 'Running the full mechanism'
     
@@ -363,7 +303,7 @@ CONTAINS
     DO I=1,NAVG
        call cpu_time(start)
        DO N=1,NITR
-          C(1:NSPEC) = C_i(1:NSPEC)
+          C(1:NSPEC) = Cinit(1:NSPEC)
           ! Initialize
           call Initialize()
           VAR(1:NVAR) = C(1:NVAR)
@@ -377,25 +317,23 @@ CONTAINS
 !          write(*,*) ISTATUS
        ENDDO
        call cpu_time(end)
+!       write(*,*) 'time: ', end-start
        full_sumtime = full_sumtime+end-start
     ENDDO
-    full_avg = full_sumtime/dble(NAVG)
+    full_avg = full_sumtime/real(NAVG)
     write(*,*) "Average integration time: ", full_avg
     write(*,*) '---------------'
  
     return
  end subroutine fullmech
 
-  subroutine compactedmech( Nv, c_i, RxR )
+  subroutine compactedmech()
     USE compact_Integrator
     USE GCKPP_RATES
     USE GCKPP_INITIALIZE
 
     IMPLICIT NONE
 
-    integer,  intent(in) :: Nv
-    real(dp), intent(in) :: c_i(NSPEC), RxR(NREACT)
-    
     ! Set OPTIONS
     IERR      = 0                 ! Success or failure flag
     ISTATUS   = 0                 ! Rosenbrock output 
@@ -414,11 +352,9 @@ CONTAINS
     ! Set ENV
     T    = 0d0
     TIN  = T
-    TOUT = T + 600._dp
+    TOUT = T + 3600._dp
     TEMP = 298.
     
-    R = RxR
-
     write(*,*) ' '
     write(*,*) 'Running the reduced mechanism'
     
@@ -431,7 +367,7 @@ CONTAINS
     DO I=1,NAVG ! Iterate to generate average comp time
        call cpu_time(start)
        DO N=1,NITR
-          C(1:NSPEC) = C_i(1:NSPEC)
+          C(1:NSPEC) = Cinit(1:NSPEC)
           ! Initialize
           call Initialize()
           VAR = C(1:NVAR)
@@ -445,13 +381,68 @@ CONTAINS
 !          write(*,*) ISTATUS
        ENDDO
        call cpu_time(end)
+!       write(*,*) 'time: ', end-start
        comp_sumtime = comp_sumtime+end-start
     ENDDO
-    compact_avg = comp_sumtime/dble(NAVG)
+    compact_avg = comp_sumtime/real(NAVG)
     write(*,*) "Average integration time: ", compact_avg
     write(*,*) '---------------'
     
     return
   end subroutine compactedmech
+
+  subroutine showoutput()
+    IMPLICIT none
+  ! Initialize formatting values
+  write(lunz,*) LU_NONZERO
+  write(nv,*) NVAR+1
+  write(clunz,*) cNONZERO
+  write(cnv,*) rNVAR+1
+
+  write(*,*) ' '
+  write(*,*) 'Species Info:'
+  write(*,*) '---------------'
+  do i=1,nvar
+!     write(*,'(a,i3)') " Species "//trim(spc_names(i))//" has index: ", i
+  enddo
+  write(*,*) '---------------'
+  write(*,*) ' '
+  write(*,*) 'Full-mech sparse data: '
+  write(*,'(a,'//lunz//'i4)') ' LU_IROW:  ', LU_IROW
+  write(*,'(a,'//lunz//'i4)') ' LU_ICOL:  ', LU_ICOL
+  write(*,'(a,'//nv//'i4)') ' LU_CROW:  ', LU_CROW
+  write(*,'(a,'//nv//'i4)') ' LU_DIAG:  ', LU_DIAG
+  write(*,*) '---------------'
+  write(*,*) ' '
+  write(*,*) 'Reduced-mech, uncompacted sparse data: '
+!  write(*,*) '-- removes species ' // SPC_NAMES(REMOVE(:))! // ' with index ', REMOVE(:)
+  write(*,'(a,'//lunz//'i4)') ' rLU_IROW: ', rLU_IROW
+  write(*,'(a,'//lunz//'i4)') ' rLU_ICOL: ', rLU_ICOL
+  write(*,*) '---------------'
+  write(*,*) ' '
+  write(*,*) 'Compacted sparse data: '
+  write(*,'(a,'//clunz//'i4)') ' cLU_IROW: ', cLU_IROW
+  write(*,'(a,'//clunz//'i4)') ' cLU_ICOL: ', cLU_ICOL
+  write(*,'(a,'//cnv//'i4)') ' cLU_CROW: ', cLU_CROW
+  write(*,'(a,'//cnv//'i4)') ' cLU_DIAG: ', cLU_DIAG
+  write(*,*) '---------------'
+  write(*,*) ' '
+!  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
+  write(*,'(a,'//clunz//'i4)') ' JVS_MAP:  ', JVS_MAP
+!  write(*,*) ' '
+!  write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
+  write(*,*) '-- ', rNVAR, SPC_MAP(rNVAR)
+  write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
+!  write(*,*) ' '
+!  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
+  write(*,'(a,'//nv//'l4)') ' DO_SLV:   ', tDO_SLV
+!  write(*,*) ' '
+!  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
+  write(*,'(a,'//nv//'l4)') ' DO_FUN:   ', tDO_FUN
+!  write(*,*) ' '
+!  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
+  write(*,'(a,'//lunz//'l4)') ' DO_JVS:   ', tDO_JVS
+
+  end subroutine showoutput
 
 end program main

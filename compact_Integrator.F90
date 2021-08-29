@@ -468,6 +468,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
    USE gckpp_JacobianSP, ONLY : cNONZERO, rNVAR
+   use gckpp_Monitor, ONLY : SPC_NAMES
 
   IMPLICIT NONE
 
@@ -506,6 +507,8 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !    EXTERNAL WLAMCH
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+   REAL(dp) :: Atmp(LU_NONZERO) = 0._dp
+   REAL(dp) :: Btmp(NVAR) = 0._dp
 
 !~~~>  Initial preparations
    T = Tstart
@@ -573,8 +576,8 @@ Stage: DO istage = 1, ros_S
 
       ! For the 1st istage the function has been computed previously
        IF ( istage == 1 ) THEN
-         !slim: CALL WCOPY(N,Fcn0,1,Fcn,1)
-	 Fcn(1:N) = Fcn0(1:N)
+          !slim: CALL WCOPY(N,Fcn0,1,Fcn,1)
+          Fcn(1:N) = Fcn0(1:N)
       ! istage>1 and a new function evaluation is needed at the current istage
        ELSEIF ( ros_NewF(istage) ) THEN
          !slim: CALL WCOPY(N,Y,1,Ynew,1)
@@ -597,19 +600,16 @@ Stage: DO istage = 1, ros_S
        END IF ! if istage == 1 elseif ros_NewF(istage)
        !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
        K(ioffset+1:ioffset+rNVAR) = Fcn(SPC_MAP)
-!      DO i = 1,rNVAR
-!       K(ioffset+i) = Fcn(SPC_MAP(i))
-!       ENDDO
        DO j = 1, istage-1
          HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
          CALL WAXPY(rNVAR,HC,K(rNVAR*(j-1)+1),1,K(ioffset+1),1)
       END DO
-       IF ((.NOT. Autonomous).AND.(ros_Gamma(istage).NE.ZERO)) THEN
+      IF ((.NOT. Autonomous).AND.(ros_Gamma(istage).NE.ZERO)) THEN
          HG = Direction*H*ros_Gamma(istage)
          CALL WAXPY(rNVAR,HG,dFdT,1,K(ioffset+1),1)
-       END IF
-       CALL ros_Solve(Ghimj, Pivot, K(ioffset+1))
-
+      END IF
+      CALL ros_Solve(Ghimj, Pivot, K(ioffset+1), Atmp, Btmp, JVS_MAP, SPC_MAP)
+       
    END DO Stage
 
 
@@ -636,21 +636,13 @@ Stage: DO istage = 1, ros_S
    DO i = 1,rNVAR
    Yerrsub(i) = Yerr(SPC_MAP(i))
    ENDDO
-!   write(*,*) 'Yerrsub before'
-!   do i=1,NVAR
-!      write(*,*) Y(i)
-!   enddo
+
    DO j=1,ros_S
         CALL WAXPY(rNVAR,ros_E(j),K(rNVAR*(j-1)+1),1,Yerrsub,1)
    END DO
    DO i = 1,rNVAR
    Yerr(SPC_MAP(i)) = Yerrsub(i)
    ENDDO
-!   Yerr(SPC_MAP) = Yerrsub(1:rNVAR)
-!   write(*,*) 'Yerrsub after'
-!   do i=1,rNVAR
-!      write(*,*) Yerrsub(i)
-!   enddo
    Err = ros_ErrorNorm ( Y, Ynew, Yerr, AbsTol, RelTol, VectorTol )
 
 !~~~> New step size is bounded by FacMin <= Hnew/H <= FacMax
@@ -864,7 +856,7 @@ Stage: DO istage = 1, ros_S
 
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE ros_Solve( A, Pivot, b )
+  SUBROUTINE ros_Solve( A, Pivot, b, Atmp, Btmp, map1, map2 )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !  Template for the forward/backward substitution (using pre-computed LU decomposition)
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -879,7 +871,7 @@ Stage: DO istage = 1, ros_S
    INTEGER, INTENT(IN) :: Pivot(N)
 !~~~> InOut variables
    REAL(kind=dp), INTENT(INOUT) :: b(rNVAR)
-   
+   INTEGER, INTENT(IN)          :: map1(cNONZERO), map2(rNVAR)
    REAL(kind=dp)                :: btmp(N), Atmp(LU_NONZERO)
 
 #ifdef FULL_ALGEBRA    
@@ -888,10 +880,11 @@ Stage: DO istage = 1, ros_S
       PRINT*,"Error in DGETRS. ISING=",ISING
    END IF  
 #else   
-   Atmp(JVS_MAP) = A
-   btmp(SPC_MAP) = b
+
+   Atmp(map1) = A
+   btmp(map2) = b
    CALL KppSolve( Atmp, btmp )
-   b = btmp(SPC_MAP)
+   b = btmp(map2)
 #endif
 
    ISTATUS(Nsol) = ISTATUS(Nsol) + 1
