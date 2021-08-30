@@ -27,19 +27,21 @@ program main
   INTEGER              :: iSPC_MAP(NVAR), nonzerocount
   LOGICAL, ALLOCATABLE :: tDO_FUN(:), tDO_SLV(:), tDO_JVS(:)
 
-  REAL(dp)             :: dcdt(NVAR), RxR(NREACT), cinit(NSPEC), lim
+  REAL(dp)             :: dcdt(NVAR), RxR(NREACT), cinit(NSPEC), lim, Cfull(NSPEC),Credux(NSPEC)
 
   LOGICAL              :: OUTPUT
+  LOGICAL              :: FORCE_FULL ! Force cIntegrate() to use the full mechanim. Inelegantly done
 
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
-  OUTPUT = .false.
+  OUTPUT     = .false.
+  FORCE_FULL = .true.
 
-  NITR = 5
-  NAVG = 1
+  NITR = 100
+  NAVG = 20
 
-  lim = 1e2
+  lim = 1e-25
 
   ALLOCATE(tDO_SLV(NVAR+1))
   ALLOCATE(tDO_FUN(NVAR))
@@ -91,7 +93,8 @@ program main
         idx=idx+1
      endif
   ENDDO
-  write(*,*) 'NVAR: ', NVAR, '  rNVAR: ', rNVAR, '  ', dble(rNVAR)/dble(NVAR)
+  write(*,*) ' '
+  write(*,*) 'NVAR: ', NVAR, '  rNVAR: ', rNVAR, '  rNVAR/NVAR', real(rNVAR)/real(NVAR)
 
 
   ! -- remove row & column
@@ -115,6 +118,7 @@ program main
   cNONZERO = nonzerocount
 
   ! -- -- -- Allocate the new Jacobian elements based on new non-zero elements
+  if (.not.FORCE_FULL) then
   ALLOCATE(cLU_IROW(cNONZERO))
   ALLOCATE(cLU_ICOL(cNONZERO))
   ALLOCATE(JVS_MAP(cNONZERO))
@@ -184,6 +188,32 @@ program main
 
   call cpu_time(end)
   setup_time = end-start
+  ELSE
+     cNONZERO = LU_NONZERO
+     rNVAR    = NVAR
+     ALLOCATE(cLU_IROW(cNONZERO))
+     ALLOCATE(cLU_ICOL(cNONZERO))
+     ALLOCATE(JVS_MAP(cNONZERO))
+     ALLOCATE(cLU_CROW(rNVAR+1))
+     ALLOCATE(cLU_DIAG(rNVAR+1))
+     ALLOCATE(SPC_MAP(rNVAR))
+     DO i=1,NVAR
+        SPC_MAP(i)  = i
+        iSPC_MAP(i) = i
+     ENDDO
+     DO i=1,LU_NONZERO
+        JVS_MAP(i) = i
+     ENDDO
+     cLU_IROW = LU_IROW
+     cLU_ICOL = LU_ICOL
+     cLU_CROW = LU_CROW
+     cLU_DIAG = LU_DIAG
+
+     tDO_SLV = .true.
+     tDO_FUN = .true.
+     tDO_JVS = .true.
+  ENDIF
+
 
   IF (OUTPUT) call showoutput()
 
@@ -202,11 +232,13 @@ program main
   call fullmech() ! initialization run
 
   call fullmech()
+  Cfull = C
 !  DO i=1,NVAR
 !     write(*,*) SPC_NAMES(i), C(i), Cinit(i)
      write(*,*) SPC_NAMES(ind_O3), C(ind_O3), Cinit(ind_O3)
      write(*,*) SPC_NAMES(ind_OH), C(ind_OH), Cinit(ind_OH)
-     write(*,*) SPC_NAMES(ind_NO), C(ind_NO), Cinit(ind_NO)
+     write(*,*) SPC_NAMES(ind_SO4), C(ind_SO4), Cinit(ind_SO4)
+     write(*,*) SPC_NAMES(ind_NO2), C(ind_NO2), Cinit(ind_NO2)
 !  END DO
 
   ! -------------------------------------------------------------------------- !
@@ -225,12 +257,23 @@ program main
   DO_JVS = tDO_JVS
 
   call compactedmech()
+  Credux = C
 !  DO i=1,NVAR
      write(*,*) SPC_NAMES(ind_O3), C(ind_O3), Cinit(ind_O3)
      write(*,*) SPC_NAMES(ind_OH), C(ind_OH), Cinit(ind_OH)
-     write(*,*) SPC_NAMES(ind_NO), C(ind_NO), Cinit(ind_NO)
+     write(*,*) SPC_NAMES(ind_SO4), C(ind_SO4), Cinit(ind_SO4)
+     write(*,*) SPC_NAMES(ind_NO2), C(ind_NO2), Cinit(ind_NO2)
 !  END DO
-
+     write(*,*) ''
+     write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_O3))//' redux-full/full ', &
+          100._dp*(Credux(ind_O3)-Cfull(ind_O3))/Cfull(ind_O3), '%'
+     write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_OH))//' redux-full/full ', &
+          100._dp*(Credux(ind_OH)-Cfull(ind_OH))/Cfull(ind_OH), '%'
+     write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_SO4))//' redux-full/full ', &
+          100._dp*(Credux(ind_SO4)-Cfull(ind_SO4))/Cfull(ind_SO4), '%'
+     write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_NO2))//' redux-full/full ', &
+          100._dp*(Credux(ind_NO2)-Cfull(ind_NO2))/Cfull(ind_NO2), '%'
+ 
   ! -------------------------------------------------------------------------- !
   ! 4. (optional) Calculate the error norm per Santillana et al. (2010) and
   !    Shen et al. (2020)
@@ -241,9 +284,9 @@ program main
 
   ! 5. Report timing comparison
 
-  write(*,'(a,f5.1,a)') ' compact/full: ', 100.*compact_avg/full_avg, "%" 
-  write(*,'(a,f5.1,a)') ' problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
-  write(*,'(a,f5.1,a)') ' non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
+  write(*,'(a,f5.1,a)') '  compact/full: ', 100.*compact_avg/full_avg, "%" 
+  write(*,'(a,f5.1,a)') '  problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
+  write(*,'(a,f5.1,a)') '  non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
 
   DEALLOCATE(tDO_SLV)
   DEALLOCATE(tDO_FUN)
@@ -258,8 +301,8 @@ program main
   DEALLOCATE(cLU_CROW)
   DEALLOCATE(cLU_DIAG)
   DEALLOCATE(SPC_MAP)
-  DEALLOCATE(rLU_IROW)
-  DEALLOCATE(rLU_ICOL)
+  if (ALLOCATED(rLU_IROW)) DEALLOCATE(rLU_IROW)
+  if (ALLOCATED(rLU_ICOL)) DEALLOCATE(rLU_ICOL)
 
 CONTAINS
 
@@ -288,7 +331,7 @@ CONTAINS
     ! Set ENV
     T    = 0d0
     TIN  = T
-    TOUT = T + 3600._dp
+    TOUT = T + 600._dp
     TEMP = 298.
     
     write(*,*) ' '
@@ -303,8 +346,8 @@ CONTAINS
     DO I=1,NAVG
        call cpu_time(start)
        DO N=1,NITR
-          C(1:NSPEC) = Cinit(1:NSPEC)
           ! Initialize
+          C(1:NSPEC) = Cinit(1:NSPEC)
           call Initialize()
           VAR(1:NVAR) = C(1:NVAR)
           FIX(1:NFIX) = C(NVAR+1:NSPEC)
@@ -323,6 +366,7 @@ CONTAINS
     full_avg = full_sumtime/real(NAVG)
     write(*,*) "Average integration time: ", full_avg
     write(*,*) '---------------'
+    write(*,*) 'fullmech ISTATUS: ', ISTATUS(:)
  
     return
  end subroutine fullmech
@@ -352,7 +396,7 @@ CONTAINS
     ! Set ENV
     T    = 0d0
     TIN  = T
-    TOUT = T + 3600._dp
+    TOUT = T + 600._dp
     TEMP = 298.
     
     write(*,*) ' '
@@ -367,8 +411,8 @@ CONTAINS
     DO I=1,NAVG ! Iterate to generate average comp time
        call cpu_time(start)
        DO N=1,NITR
-          C(1:NSPEC) = Cinit(1:NSPEC)
           ! Initialize
+          C(1:NSPEC) = Cinit(1:NSPEC)
           call Initialize()
           VAR = C(1:NVAR)
           FIX = C(NVAR+1:NSPEC)
@@ -387,6 +431,7 @@ CONTAINS
     compact_avg = comp_sumtime/real(NAVG)
     write(*,*) "Average integration time: ", compact_avg
     write(*,*) '---------------'
+    write(*,*) 'compmech ISTATUS: ', ISTATUS(:)
     
     return
   end subroutine compactedmech
