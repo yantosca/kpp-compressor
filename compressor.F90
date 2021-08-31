@@ -8,7 +8,7 @@ program main
 
   IMPLICIT NONE
 
-  INTEGER                :: ICNTRL(20), IERR, I, N
+  INTEGER                :: ICNTRL(20), IERR, I, II, N
   INTEGER                :: ISTATUS(20)
   REAL(dp)               :: RCNTRL(20)
   REAL(dp)               :: RSTATE(20)
@@ -27,7 +27,7 @@ program main
   INTEGER              :: iSPC_MAP(NVAR), nonzerocount
   LOGICAL, ALLOCATABLE :: tDO_FUN(:), tDO_SLV(:), tDO_JVS(:)
 
-  REAL(dp)             :: dcdt(NVAR), RxR(NREACT), cinit(NSPEC), lim, Cfull(NSPEC),Credux(NSPEC)
+  REAL(dp)             :: dcdt(NVAR), RxR(NREACT), cinit(NSPEC), lim, Cfull(NSPEC),Credux(NSPEC), RRMS
 
   LOGICAL              :: OUTPUT
   LOGICAL              :: FORCE_FULL ! Force cIntegrate() to use the full mechanim. Inelegantly done
@@ -36,12 +36,12 @@ program main
   character(len=20) :: lunz, nv, clunz, cnv
 
   OUTPUT     = .false.
-  FORCE_FULL = .true.
+  FORCE_FULL = .false.
 
-  NITR = 100
-  NAVG = 20
+  NITR = 1
+  NAVG = 200
 
-  lim = 1e-25
+  lim = 1e2
 
   ALLOCATE(tDO_SLV(NVAR+1))
   ALLOCATE(tDO_FUN(NVAR))
@@ -68,8 +68,8 @@ program main
   R     = 0._dp
   Cinit = 0._dp
 
-!  call set_quants_uppertrop(dcdt,Cinit,R)
-  call set_quantssfc(dcdt,Cinit,R)
+  call set_quants_uppertrop(dcdt,Cinit,R)
+!  call set_quantssfc(dcdt,Cinit,R)
 
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
@@ -288,6 +288,18 @@ program main
   write(*,'(a,f5.1,a)') '  problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
   write(*,'(a,f5.1,a)') '  non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
 
+  IF (OUTPUT) THEN
+  DO i=1,rNVAR
+     ii = SPC_MAP(i)
+     write(*,*) SPC_NAMES(ii) // ': ', Cfull(ii), Credux(ii), (Credux(ii)-Cfull(ii))/Cfull(ii)
+  ENDDO
+  ENDIF
+
+  RRMS = sqrt(sum(((Credux(SPC_MAP)-Cfull(SPC_MAP))/Cfull(SPC_MAP))**2,&
+       MASK=Cfull(SPC_MAP).ne.0..and.Cfull(SPC_MAP).gt.1e6_dp)/dble(rNVAR))
+
+  write(*,'(a,f5.1)') 'RRMS: ', 100.*RRMS
+
   DEALLOCATE(tDO_SLV)
   DEALLOCATE(tDO_FUN)
   DEALLOCATE(tDO_JVS)
@@ -447,9 +459,9 @@ CONTAINS
   write(*,*) ' '
   write(*,*) 'Species Info:'
   write(*,*) '---------------'
-  do i=1,nvar
+!  do i=1,nvar
 !     write(*,'(a,i3)') " Species "//trim(spc_names(i))//" has index: ", i
-  enddo
+!  enddo
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Full-mech sparse data: '
@@ -460,7 +472,7 @@ CONTAINS
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Reduced-mech, uncompacted sparse data: '
-!  write(*,*) '-- removes species ' // SPC_NAMES(REMOVE(:))! // ' with index ', REMOVE(:)
+  write(*,*) '-- removes species ' // SPC_NAMES(REMOVE(:))! // ' with index ', REMOVE(:)
   write(*,'(a,'//lunz//'i4)') ' rLU_IROW: ', rLU_IROW
   write(*,'(a,'//lunz//'i4)') ' rLU_ICOL: ', rLU_ICOL
   write(*,*) '---------------'
@@ -472,20 +484,20 @@ CONTAINS
   write(*,'(a,'//cnv//'i4)') ' cLU_DIAG: ', cLU_DIAG
   write(*,*) '---------------'
   write(*,*) ' '
-!  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
+  write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
   write(*,'(a,'//clunz//'i4)') ' JVS_MAP:  ', JVS_MAP
-!  write(*,*) ' '
-!  write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
+  write(*,*) ' '
+  write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
   write(*,*) '-- ', rNVAR, SPC_MAP(rNVAR)
   write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
-!  write(*,*) ' '
-!  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
+  write(*,*) ' '
+  write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
   write(*,'(a,'//nv//'l4)') ' DO_SLV:   ', tDO_SLV
-!  write(*,*) ' '
-!  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
+  write(*,*) ' '
+  write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
   write(*,'(a,'//nv//'l4)') ' DO_FUN:   ', tDO_FUN
-!  write(*,*) ' '
-!  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
+  write(*,*) ' '
+  write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
   write(*,'(a,'//lunz//'l4)') ' DO_JVS:   ', tDO_JVS
 
   end subroutine showoutput

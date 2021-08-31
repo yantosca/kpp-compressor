@@ -883,6 +883,8 @@ Stage: DO istage = 1, ros_S
 
    Atmp(map1) = A
    btmp(map2) = b
+!   call cWCOPY(cNONZERO,LU_NONZERO,A,1,Atmp,1,map1)
+!   call cWCOPY(rNVAR,NVAR,B,1,Btmp,1,map2)
    CALL KppSolve( Atmp, btmp )
    b = btmp(map2)
 #endif
@@ -1464,6 +1466,43 @@ SUBROUTINE cWAXPY(N,Alpha,X,incX,Y,incY,fN,indx)
   END DO
   
 END SUBROUTINE cWAXPY
+
+!--------------------------------------------------------------
+      SUBROUTINE cWCOPY(N,NN,X,incX,Y,incY,indx)
+!--------------------------------------------------------------
+!     copies a vector, x, to a vector, y:  y <- x
+!     only for incX=incY=1
+!     after BLAS
+!     replace this by the function from the optimized BLAS implementation:
+!         CALL  SCOPY(N,X,1,Y,1)   or   CALL  DCOPY(N,X,1,Y,1)
+!--------------------------------------------------------------
+!     USE gckpp_Precision
+      
+      INTEGER  :: i,incX,incY,M,MP1,N,NN,indx(NN)
+      REAL(kind=dp) :: X(N),Y(NN)
+
+      IF (N.LE.0) RETURN
+
+      M = MOD(N,8)
+      IF( M .NE. 0 ) THEN
+        DO i = 1,M
+          Y(indx(i)) = X(i)
+        END DO
+        IF( N .LT. 8 ) RETURN
+      END IF    
+      MP1 = M+1
+      DO i = MP1,N,8
+        Y(indx(i)) = X(i)
+        Y(indx(i + 1)) = X(i + 1)
+        Y(indx(i + 2)) = X(i + 2)
+        Y(indx(i + 3)) = X(i + 3)
+        Y(indx(i + 4)) = X(i + 4)
+        Y(indx(i + 5)) = X(i + 5)
+        Y(indx(i + 6)) = X(i + 6)
+        Y(indx(i + 7)) = X(i + 7)
+      END DO
+
+      END SUBROUTINE cWCOPY
 
 END MODULE compact_Integrator
 
