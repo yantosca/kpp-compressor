@@ -467,7 +467,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !      and its coefficients ros_{A,C,M,E,Alpha,Gamma}
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
-   USE gckpp_JacobianSP, ONLY : cNONZERO, rNVAR
+   USE gckpp_Global,  ONLY : cNONZERO, rNVAR
    use gckpp_Monitor, ONLY : SPC_NAMES
 
   IMPLICIT NONE
@@ -599,7 +599,7 @@ Stage: DO istage = 1, ros_S
          ISTATUS(Nfun) = ISTATUS(Nfun) + 1
        END IF ! if istage == 1 elseif ros_NewF(istage)
        !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
-       K(ioffset+1:ioffset+rNVAR) = Fcn(SPC_MAP)
+       K(ioffset+1:ioffset+rNVAR) = Fcn(SPC_MAP(1:rNVAR))
        DO j = 1, istage-1
          HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
          CALL WAXPY(rNVAR,HC,K(rNVAR*(j-1)+1),1,K(ioffset+1),1)

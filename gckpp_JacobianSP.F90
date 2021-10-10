@@ -817,17 +817,6 @@ MODULE gckpp_JacobianSP
      2749,2773,2831,2880,2920,2962,2992,3022,3121,3209,3334,3366, & ! index 253 - 264
      3566,3662,3749,3828,3882,3918,3968,4023,4059,4221,4222 /)
 
-  LOGICAL, ALLOCATABLE :: DO_JVS(:)
-  LOGICAL, ALLOCATABLE :: DO_SLV(:)
-  LOGICAL, ALLOCATABLE :: DO_FUN(:)
-  INTEGER, ALLOCATABLE :: cLU_IROW(:)  ! Compacted ROW indexes
-  INTEGER, ALLOCATABLE :: cLU_ICOL(:)  ! Compacted COL indexes
-  INTEGER, ALLOCATABLE :: cLU_CROW(:)  ! Compacted compressed row vector
-  INTEGER, ALLOCATABLE :: cLU_DIAG(:)  ! Compacted DIAG indexes
-  INTEGER, ALLOCATABLE :: JVS_MAP(:)   ! Map to JVS from compacted sparse data
-  INTEGER, ALLOCATABLE :: SPC_MAP(:)   ! Map species (for Fun(), etc.)
-  INTEGER :: rNVAR     ! Compacted number of variable species
-  INTEGER :: cNONZERO  ! Compacted number of non-zero elements in cJVS
 
 END MODULE gckpp_JacobianSP
 

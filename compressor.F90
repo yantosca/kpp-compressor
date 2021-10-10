@@ -1,5 +1,11 @@
 program main
 
+  ! GIT Branch fullchem_online
+  ! 1) make the vectors non-allocatable by setting the bounding index
+  !    -- this will allow not having to repeatedly allocate & deallocate
+  !       vectors. We already know none of them will be longer than
+  !       NVAR or LU_NONZERO
+
   USE GCKPP_GLOBAL
   USE GCKPP_JACOBIANSP
   USE GCKPP_PARAMETERS
@@ -47,9 +53,9 @@ program main
   ALLOCATE(tDO_FUN(NVAR))
   ALLOCATE(tDO_JVS(LU_NONZERO))
 
-  ALLOCATE(DO_SLV(NVAR+1))  ! Yes/no (1/0), Used to control KppSolve()
-  ALLOCATE(DO_FUN(NVAR)  )  ! Yes/no (1/0), Used to control Fun()
-  ALLOCATE(DO_JVS(LU_NONZERO)) ! Yes/No (1/0), compute term, used to control Jac_SP()
+!<<>>  ALLOCATE(DO_SLV(NVAR+1))  ! Yes/no (1/0), Used to control KppSolve()
+!<<>>  ALLOCATE(DO_FUN(NVAR)  )  ! Yes/no (1/0), Used to control Fun()
+!<<>>  ALLOCATE(DO_JVS(LU_NONZERO)) ! Yes/No (1/0), compute term, used to control Jac_SP()
 
   call cpu_time(start)
 
@@ -119,13 +125,13 @@ program main
 
   ! -- -- -- Allocate the new Jacobian elements based on new non-zero elements
   if (.not.FORCE_FULL) then
-  ALLOCATE(cLU_IROW(cNONZERO))
-  ALLOCATE(cLU_ICOL(cNONZERO))
-  ALLOCATE(JVS_MAP(cNONZERO))
-  ALLOCATE(cLU_CROW(rNVAR+1))
-  ALLOCATE(cLU_DIAG(rNVAR+1))
-  ALLOCATE(SPC_MAP(rNVAR))
-
+!<<>>  ALLOCATE(cLU_IROW(LU_NONZERO))
+!<<>>  ALLOCATE(cLU_ICOL(LU_NONZERO))
+!<<>>  ALLOCATE(JVS_MAP(LU_NONZERO))
+!<<>>  ALLOCATE(cLU_CROW(NVAR+1))
+!<<>>  ALLOCATE(cLU_DIAG(NVAR+1))
+!<<>>  ALLOCATE(SPC_MAP(NVAR))
+!<<>>
   ALLOCATE(rLU_IROW(LU_NONZERO))
   ALLOCATE(rLU_ICOL(LU_NONZERO))
   rLU_IROW = -999
@@ -191,12 +197,12 @@ program main
   ELSE
      cNONZERO = LU_NONZERO
      rNVAR    = NVAR
-     ALLOCATE(cLU_IROW(cNONZERO))
-     ALLOCATE(cLU_ICOL(cNONZERO))
-     ALLOCATE(JVS_MAP(cNONZERO))
-     ALLOCATE(cLU_CROW(rNVAR+1))
-     ALLOCATE(cLU_DIAG(rNVAR+1))
-     ALLOCATE(SPC_MAP(rNVAR))
+!<<>>     ALLOCATE(cLU_IROW(LU_NONZERO))
+!<<>>     ALLOCATE(cLU_ICOL(LU_NONZERO))
+!<<>>     ALLOCATE(JVS_MAP(LU_NONZERO))
+!<<>>     ALLOCATE(cLU_CROW(NVAR+1))
+!<<>>     ALLOCATE(cLU_DIAG(NVAR+1))
+!<<>>     ALLOCATE(SPC_MAP(NVAR))
      DO i=1,NVAR
         SPC_MAP(i)  = i
         iSPC_MAP(i) = i
@@ -295,26 +301,26 @@ program main
   ENDDO
   ENDIF
 
-  RRMS = sqrt(sum(((Credux(SPC_MAP)-Cfull(SPC_MAP))/Cfull(SPC_MAP))**2,&
-       MASK=Cfull(SPC_MAP).ne.0..and.Cfull(SPC_MAP).gt.1e6_dp)/dble(rNVAR))
+  RRMS = sqrt(sum(((Credux(SPC_MAP(1:rNVAR))-Cfull(SPC_MAP(1:rNVAR)))/Cfull(SPC_MAP(1:rNVAR)))**2,&
+       MASK=Cfull(SPC_MAP(1:rNVAR)).ne.0..and.Cfull(SPC_MAP(1:rNVAR)).gt.1e6_dp)/dble(rNVAR))
 
   write(*,'(a,f5.1)') 'RRMS: ', 100.*RRMS
 
-  DEALLOCATE(tDO_SLV)
-  DEALLOCATE(tDO_FUN)
-  DEALLOCATE(tDO_JVS)
-  DEALLOCATE(DO_SLV)
-  DEALLOCATE(DO_FUN)
-  DEALLOCATE(DO_JVS)
-  DEALLOCATE(REMOVE)
-  DEALLOCATE(cLU_IROW)
-  DEALLOCATE(cLU_ICOL)
-  DEALLOCATE(JVS_MAP)
-  DEALLOCATE(cLU_CROW)
-  DEALLOCATE(cLU_DIAG)
-  DEALLOCATE(SPC_MAP)
-  if (ALLOCATED(rLU_IROW)) DEALLOCATE(rLU_IROW)
-  if (ALLOCATED(rLU_ICOL)) DEALLOCATE(rLU_ICOL)
+!<<>>  DEALLOCATE(tDO_SLV)
+!<<>>  DEALLOCATE(tDO_FUN)
+!<<>>  DEALLOCATE(tDO_JVS)
+!<<>>  DEALLOCATE(DO_SLV)
+!<<>>  DEALLOCATE(DO_FUN)
+!<<>>  DEALLOCATE(DO_JVS)
+!<<>>  DEALLOCATE(REMOVE)
+!<<>>  DEALLOCATE(cLU_IROW)
+!<<>>  DEALLOCATE(cLU_ICOL)
+!<<>>  DEALLOCATE(JVS_MAP)
+!<<>>  DEALLOCATE(cLU_CROW)
+!<<>>  DEALLOCATE(cLU_DIAG)
+!<<>>  DEALLOCATE(SPC_MAP)
+!<<>>  if (ALLOCATED(rLU_IROW)) DEALLOCATE(rLU_IROW)
+!<<>>  if (ALLOCATED(rLU_ICOL)) DEALLOCATE(rLU_ICOL)
 
 CONTAINS
 
@@ -378,7 +384,7 @@ CONTAINS
     full_avg = full_sumtime/real(NAVG)
     write(*,*) "Average integration time: ", full_avg
     write(*,*) '---------------'
-    write(*,*) 'fullmech ISTATUS: ', ISTATUS(:)
+!    write(*,*) 'fullmech ISTATUS: ', ISTATUS(:)
  
     return
  end subroutine fullmech
@@ -443,7 +449,7 @@ CONTAINS
     compact_avg = comp_sumtime/real(NAVG)
     write(*,*) "Average integration time: ", compact_avg
     write(*,*) '---------------'
-    write(*,*) 'compmech ISTATUS: ', ISTATUS(:)
+!    write(*,*) 'compmech ISTATUS: ', ISTATUS(:)
     
     return
   end subroutine compactedmech
