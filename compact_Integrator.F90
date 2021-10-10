@@ -488,7 +488,7 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !~~~> Output: Error indicator
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables
-   REAL(kind=dp) :: Ynew(N), Ysub(rNVAR), Fcn0(N), Fcn(N)
+   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N)
    REAL(kind=dp) :: K(rNVAR*ros_S), dFdT(N)
 #ifdef FULL_ALGEBRA    
    REAL(kind=dp) :: Jac0(N,N), Ghimj(N,N)
