@@ -15,7 +15,7 @@ program main
 
   IMPLICIT NONE
 
-  INTEGER                :: ICNTRL(20), IERR, I, II, N
+  INTEGER                :: ICNTRL(20), IERR, I, II, III, N
   INTEGER                :: ISTATUS(20)
   REAL(dp)               :: RCNTRL(20)
   REAL(dp)               :: RSTATE(20)
@@ -93,58 +93,43 @@ program main
         NRMV=NRMV+1
         tDO_SLV(i) = .false.
         tDO_FUN(i) = .false.
-     else
-        SPC_MAP(S)  = i
-        iSPC_MAP(i) = S
-        S=S+1
+        cycle
      endif
+     SPC_MAP(S)  = i
+     iSPC_MAP(i) = S
+     S=S+1
   ENDDO
   rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
 
-  cLU_CROW(1) = 1 ! 1st index = 1
-  cLU_DIAG(1) = 1 ! 1st index = 1
-
-  S   = 1
   II  = 1
+  III = 1
   idx = 0
   DO i = 1,LU_NONZERO
-     IF ((.not.tDO_SLV(LU_IROW(i))).or.(.not.tDO_SLV(LU_ICOL(i)))) THEN
-        tDO_JVS(i) = .false.
-     ELSE
+     IF ((tDO_SLV(LU_IROW(i))).and.(tDO_SLV(LU_ICOL(i)))) THEN
         idx=idx+1
         cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
         cLU_ICOL(idx) = iSPC_MAP(LU_ICOL(i))
         JVS_MAP(idx)  = i
         
         IF (idx.gt.1.and.(cLU_IROW(idx).ne.cLU_IROW(idx-1))) THEN
-           S=S+1
-           cLU_CROW(S) = idx
-        ENDIF
-        IF (cLU_IROW(idx).eq.cLU_ICOL(idx)) THEN
            II=II+1
-           cLU_DIAG(II) = idx
+           cLU_CROW(II) = idx
         ENDIF
+        IF (idx.gt.1.and.cLU_IROW(idx).eq.cLU_ICOL(idx)) THEN
+           III=III+1
+           cLU_DIAG(III) = idx
+        ENDIF
+        cycle
      ENDIF
+     tDO_JVS(i) = .false.
   ENDDO
   
   cNONZERO = idx
   
+  cLU_CROW(1)       = 1 ! 1st index = 1
+  cLU_DIAG(1)       = 1 ! 1st index = 1
   cLU_CROW(rNVAR+1) = cNONZERO+1
   cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
-  
-!  S  = 1
-!  II = 1
-!>>  DO i = 2,cNONZERO
-!>>     IF ((cLU_IROW(i).ne.cLU_IROW(i-1))) THEN
-!>>        S=S+1
-!>>        cLU_CROW(S) = i
-!>>     ENDIF
-!>>     IF (cLU_IROW(i).eq.cLU_ICOL(i)) THEN
-!>>        II=II+1
-!>>        cLU_DIAG(II) = i 
-!>>     ENDIF
-!>>  ENDDO
-  
   
   call cpu_time(end)
   write(*,*) 'Setup time: ', real(end-start)
