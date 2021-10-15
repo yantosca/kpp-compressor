@@ -7,7 +7,6 @@ program main
   !       NVAR or LU_NONZERO
 
   USE GCKPP_GLOBAL
-  USE GCKPP_FUNCTION, ONLY: FUN, FLUX
   USE GCKPP_JACOBIANSP
   USE GCKPP_PARAMETERS
   USE GCKPP_MONITOR
@@ -76,66 +75,66 @@ program main
   call set_quantssfc(dcdt,Cinit,R)
 !  call set_quants_uppertrop(dcdt,Cinit,R)
 
-  call cpu_time(start)
-
-  tDO_SLV  = .true.
-  tDO_FUN  = .true.
-  tDO_JVS  = .true.
-
-  iSPC_MAP = 0
-
-  call Fun ( Cinit(1:NVAR), Cinit(NVAR+1:NSPEC), R, dcdt, A )
-    
-  NRMV = 0
-  S    = 1
-  do i=1,NVAR
-     if (abs(dcdt(i)).le.lim) then
-        NRMV=NRMV+1
-        tDO_SLV(i) = .false.
-        tDO_FUN(i) = .false.
-        cycle
-     endif
-     SPC_MAP(S)  = i
-     iSPC_MAP(i) = S
-     S=S+1
-  ENDDO
-  rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
-
-  II  = 1
-  III = 1
-  idx = 0
-  DO i = 1,LU_NONZERO
-     IF ((tDO_SLV(LU_IROW(i))).and.(tDO_SLV(LU_ICOL(i)))) THEN
-        idx=idx+1
-        cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
-        cLU_ICOL(idx) = iSPC_MAP(LU_ICOL(i))
-        JVS_MAP(idx)  = i
-        
-        IF (idx.gt.1.and.(cLU_IROW(idx).ne.cLU_IROW(idx-1))) THEN
-           II=II+1
-           cLU_CROW(II) = idx
-        ENDIF
-        IF (idx.gt.1.and.cLU_IROW(idx).eq.cLU_ICOL(idx)) THEN
-           III=III+1
-           cLU_DIAG(III) = idx
-        ENDIF
-        cycle
-     ENDIF
-     tDO_JVS(i) = .false.
-  ENDDO
-  
-  cNONZERO = idx
-  
-  cLU_CROW(1)       = 1 ! 1st index = 1
-  cLU_DIAG(1)       = 1 ! 1st index = 1
-  cLU_CROW(rNVAR+1) = cNONZERO+1
-  cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
-  
-  call cpu_time(end)
-  write(*,*) 'Setup time: ', real(end-start)
-
-  IF (OUTPUT) call showoutput()
-  
+!<<>>  call cpu_time(start)
+!<<>>
+!<<>>  tDO_SLV  = .true.
+!<<>>  tDO_FUN  = .true.
+!<<>>  tDO_JVS  = .true.
+!<<>>
+!<<>>  iSPC_MAP = 0
+!<<>>
+!<<>>  call Fun ( Cinit(1:NVAR), Cinit(NVAR+1:NSPEC), R, dcdt, A )
+!<<>>    
+!<<>>  NRMV = 0
+!<<>>  S    = 1
+!<<>>  do i=1,NVAR
+!<<>>     if (abs(dcdt(i)).le.lim) then
+!<<>>        NRMV=NRMV+1
+!<<>>        tDO_SLV(i) = .false.
+!<<>>        tDO_FUN(i) = .false.
+!<<>>        cycle
+!<<>>     endif
+!<<>>     SPC_MAP(S)  = i
+!<<>>     iSPC_MAP(i) = S
+!<<>>     S=S+1
+!<<>>  ENDDO
+!<<>>  rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
+!<<>>
+!<<>>  II  = 1
+!<<>>  III = 1
+!<<>>  idx = 0
+!<<>>  DO i = 1,LU_NONZERO
+!<<>>     IF ((tDO_SLV(LU_IROW(i))).and.(tDO_SLV(LU_ICOL(i)))) THEN
+!<<>>        idx=idx+1
+!<<>>        cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
+!<<>>        cLU_ICOL(idx) = iSPC_MAP(LU_ICOL(i))
+!<<>>        JVS_MAP(idx)  = i
+!<<>>        
+!<<>>        IF (idx.gt.1.and.(cLU_IROW(idx).ne.cLU_IROW(idx-1))) THEN
+!<<>>           II=II+1
+!<<>>           cLU_CROW(II) = idx
+!<<>>        ENDIF
+!<<>>        IF (idx.gt.1.and.cLU_IROW(idx).eq.cLU_ICOL(idx)) THEN
+!<<>>           III=III+1
+!<<>>           cLU_DIAG(III) = idx
+!<<>>        ENDIF
+!<<>>        cycle
+!<<>>     ENDIF
+!<<>>     tDO_JVS(i) = .false.
+!<<>>  ENDDO
+!<<>>  
+!<<>>  cNONZERO = idx
+!<<>>  
+!<<>>  cLU_CROW(1)       = 1 ! 1st index = 1
+!<<>>  cLU_DIAG(1)       = 1 ! 1st index = 1
+!<<>>  cLU_CROW(rNVAR+1) = cNONZERO+1
+!<<>>  cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
+!<<>>  
+!<<>>  call cpu_time(end)
+!<<>>  write(*,*) 'Setup time: ', real(end-start)
+!<<>>
+!<<>>  IF (OUTPUT) call showoutput()
+!<<>>  
   ! -------------------------------------------------------------------------- !
   ! 2. Run the full mechanism
 
@@ -165,12 +164,7 @@ program main
   ! - the compacted mechanism will still process the full species vector, 
   !   C(NVAR), not c(rNVAR), only dC/dt of inactive species is zero
 
-  ! OK, now turn on the comp controls
-  DO_SLV = tDO_SLV
-  DO_FUN = tDO_FUN
-  DO_JVS = tDO_JVS
-
-  call compactedmech()
+   call compactedmech()
   Credux = C
   write(*,*) SPC_NAMES(ind_O3), C(ind_O3), Cinit(ind_O3)
   write(*,*) SPC_NAMES(ind_OH), C(ind_OH), Cinit(ind_OH)

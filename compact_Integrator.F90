@@ -399,7 +399,7 @@ SUBROUTINE cRosenbrock(N,Y,Tstart,Tend, &
 
 
 !~~~>  CALL Rosenbrock method
-   CALL ros_Integrator(Y, Tstart, Tend, Texit,   &
+   CALL ros_cIntegrator(Y, Tstart, Tend, Texit,   &
         AbsTol, RelTol,                          &
 !  Integration parameters
         Autonomous, VectorTol, Max_no_steps,     &
@@ -466,9 +466,6 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !      defined by ros_S (no of stages)
 !      and its coefficients ros_{A,C,M,E,Alpha,Gamma}
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   
-   USE gckpp_Global,  ONLY : cNONZERO, rNVAR
-   use gckpp_Monitor, ONLY : SPC_NAMES
 
   IMPLICIT NONE
 
@@ -489,14 +486,14 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables
    REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N)
-   REAL(kind=dp) :: K(rNVAR*ros_S), dFdT(N)
+   REAL(kind=dp) :: K(N*ros_S), dFdT(N)
 #ifdef FULL_ALGEBRA    
    REAL(kind=dp) :: Jac0(N,N), Ghimj(N,N)
 #else
-   REAL(kind=dp) :: Jac0(LU_NONZERO), Ghimj(cNONZERO)
+   REAL(kind=dp) :: Jac0(LU_NONZERO), Ghimj(LU_NONZERO)
 #endif
    REAL(kind=dp) :: H, Hnew, HC, HG, Fac, Tau
-   REAL(kind=dp) :: Err, Yerr(N), Yerrsub(rNVAR)
+   REAL(kind=dp) :: Err, Yerr(N)
    INTEGER :: Pivot(N), Direction, ioffset, j, istage
    LOGICAL :: RejectLastH, RejectMoreH, Singular
 !~~~>  Local parameters
@@ -507,10 +504,12 @@ CONTAINS !  SUBROUTINES internal to Rosenbrock
 !    EXTERNAL WLAMCH
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   REAL(dp) :: Atmp(LU_NONZERO) = 0._dp
-   REAL(dp) :: Btmp(NVAR) = 0._dp
 
 !~~~>  Initial preparations
+   DO_SLV  = .true.
+   DO_FUN  = .true.
+   DO_JVS  = .true.
+
    T = Tstart
    RSTATUS(Nhexit) = ZERO
    H = MIN( MAX(ABS(Hmin),ABS(Hstart)) , ABS(Hmax) )
@@ -544,9 +543,223 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    H = MIN(H,ABS(Tend-T))
 
 !~~~>   Compute the function at current time
-   CALL FunTemplate(T,Y,Fcn0) ! Reacts to DO_FUN()
+   CALL FunSplitTemplate(T,Y,Fcn0)
+   ISTATUS(Nfun) = ISTATUS(Nfun) + 1
+
+!~~~>  Compute the function derivative with respect to T
+   IF (.NOT.Autonomous) THEN
+      CALL ros_FunTimeDerivative ( T, Roundoff, Y, &
+                Fcn0, dFdT )
+   END IF
+
+!~~~>   Compute the Jacobian at current time
+   CALL JacTemplate(T,Y,Jac0)
+   ISTATUS(Njac) = ISTATUS(Njac) + 1
+
+!~~~>  Repeat step calculation until current step accepted
+UntilAccepted: DO
+
+   CALL ros_PrepareMatrix(H,Direction,ros_Gamma(1), &
+          Jac0,Ghimj,Pivot,Singular)
+   IF (Singular) THEN ! More than 5 consecutive failed decompositions
+       CALL ros_ErrorMsg(-8,T,H,IERR)
+       RETURN
+   END IF
+
+!~~~>   Compute the stages
+Stage: DO istage = 1, ros_S
+
+      ! Current istage offset. Current istage vector is K(ioffset+1:ioffset+N)
+       ioffset = N*(istage-1)
+
+      ! For the 1st istage the function has been computed previously
+       IF ( istage == 1 ) THEN
+         !slim: CALL WCOPY(N,Fcn0,1,Fcn,1)
+	 Fcn(1:N) = Fcn0(1:N)
+      ! istage>1 and a new function evaluation is needed at the current istage
+       ELSEIF ( ros_NewF(istage) ) THEN
+         !slim: CALL WCOPY(N,Y,1,Ynew,1)
+	 Ynew(1:N) = Y(1:N)
+         DO j = 1, istage-1
+           CALL WAXPY(N,ros_A((istage-1)*(istage-2)/2+j), &
+            K(N*(j-1)+1),1,Ynew,1)
+         END DO
+         Tau = T + ros_Alpha(istage)*Direction*H
+         CALL FunSplitTemplate(Tau,Ynew,Fcn)
+         ISTATUS(Nfun) = ISTATUS(Nfun) + 1
+       END IF ! if istage == 1 elseif ros_NewF(istage)
+       !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
+       K(ioffset+1:ioffset+N) = Fcn(1:N)
+       DO j = 1, istage-1
+         HC = ros_C((istage-1)*(istage-2)/2+j)/(Direction*H)
+         CALL WAXPY(N,HC,K(N*(j-1)+1),1,K(ioffset+1),1)
+       END DO
+       IF ((.NOT. Autonomous).AND.(ros_Gamma(istage).NE.ZERO)) THEN
+         HG = Direction*H*ros_Gamma(istage)
+         CALL WAXPY(N,HG,dFdT,1,K(ioffset+1),1)
+       END IF
+       CALL ros_Solve(Ghimj, Pivot, K(ioffset+1))
+
+   END DO Stage
+
+
+!~~~>  Compute the new solution
+   !slim: CALL WCOPY(N,Y,1,Ynew,1)
+   Ynew(1:N) = Y(1:N)
+   DO j=1,ros_S
+         CALL WAXPY(N,ros_M(j),K(N*(j-1)+1),1,Ynew,1)
+   END DO
+
+!~~~>  Compute the error estimation
+   !slim: CALL WSCAL(N,ZERO,Yerr,1)
+   Yerr(1:N) = ZERO
+   DO j=1,ros_S
+        CALL WAXPY(N,ros_E(j),K(N*(j-1)+1),1,Yerr,1)
+   END DO
+   Err = ros_ErrorNorm ( Y, Ynew, Yerr, AbsTol, RelTol, VectorTol )
+
+!~~~> New step size is bounded by FacMin <= Hnew/H <= FacMax
+   Fac  = MIN(FacMax,MAX(FacMin,FacSafe/Err**(ONE/ros_ELO)))
+   Hnew = H*Fac
+
+!~~~>  Check the error magnitude and adjust step size
+   ISTATUS(Nstp) = ISTATUS(Nstp) + 1
+   IF ( (Err <= ONE).OR.(H <= Hmin) ) THEN  !~~~> Accept step
+      ISTATUS(Nacc) = ISTATUS(Nacc) + 1
+      !slim: CALL WCOPY(N,Ynew,1,Y,1)
+      Y(1:N) = Ynew(1:N)
+      T = T + Direction*H
+      Hnew = MAX(Hmin,MIN(Hnew,Hmax))
+      IF (RejectLastH) THEN  ! No step size increase after a rejected step
+         Hnew = MIN(Hnew,H)
+      END IF
+      RSTATUS(Nhexit) = H
+      RSTATUS(Nhnew)  = Hnew
+      RSTATUS(Ntexit) = T
+      RejectLastH = .FALSE.
+      RejectMoreH = .FALSE.
+      H = Hnew
+      EXIT UntilAccepted ! EXIT THE LOOP: WHILE STEP NOT ACCEPTED
+   ELSE           !~~~> Reject step
+      IF (RejectMoreH) THEN
+         Hnew = H*FacRej
+      END IF
+      RejectMoreH = RejectLastH
+      RejectLastH = .TRUE.
+      H = Hnew
+      IF (ISTATUS(Nacc) >= 1)  ISTATUS(Nrej) = ISTATUS(Nrej) + 1
+   END IF ! Err <= 1
+
+   END DO UntilAccepted
+
+   
+   END DO TimeLoop
+
+!~~~> Succesful exit
+   IERR = 1  !~~~> The integration was successful
+
+  END SUBROUTINE ros_Integrator
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ SUBROUTINE ros_cIntegrator (Y, Tstart, Tend, T,  &
+        AbsTol, RelTol,                          &
+!~~~> Integration parameters
+        Autonomous, VectorTol, Max_no_steps,     &
+        Roundoff, Hmin, Hmax, Hstart,            &
+        FacMin, FacMax, FacRej, FacSafe,         &
+!~~~> Error indicator
+        IERR )
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!   Template for the implementation of a generic Rosenbrock method
+!      defined by ros_S (no of stages)
+!      and its coefficients ros_{A,C,M,E,Alpha,Gamma}
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   
+   USE gckpp_Global,  ONLY : cNONZERO, rNVAR
+   use gckpp_Monitor, ONLY : SPC_NAMES
+
+  IMPLICIT NONE
+
+!~~~> Input: the initial condition at Tstart; Output: the solution at T
+   REAL(kind=dp), INTENT(INOUT) :: Y(N)
+!~~~> Input: integration interval
+   REAL(kind=dp), INTENT(IN) :: Tstart,Tend
+!~~~> Output: time at which the solution is returned (T=Tend if success)
+   REAL(kind=dp), INTENT(OUT) ::  T
+!~~~> Input: tolerances
+   REAL(kind=dp), INTENT(IN) ::  AbsTol(N), RelTol(N)
+!~~~> Input: integration parameters
+   LOGICAL, INTENT(IN) :: Autonomous, VectorTol
+   REAL(kind=dp), INTENT(IN) :: Hstart, Hmin, Hmax
+   INTEGER, INTENT(IN) :: Max_no_steps
+   REAL(kind=dp), INTENT(IN) :: Roundoff, FacMin, FacMax, FacRej, FacSafe
+!~~~> Output: Error indicator
+   INTEGER, INTENT(OUT) :: IERR
+! ~~~~ Local variables
+   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N), Prod(N), Loss(N)
+   REAL(kind=dp) :: K(NVAR*ros_S), dFdT(N)
+#ifdef FULL_ALGEBRA    
+   REAL(kind=dp) :: Jac0(N,N), Ghimj(N,N)
+#else
+   REAL(kind=dp) :: Jac0(LU_NONZERO), Ghimj(LU_NONZERO)
+#endif
+   REAL(kind=dp) :: H, Hnew, HC, HG, Fac, Tau
+   REAL(kind=dp) :: Err, Yerr(N), Yerrsub(NVAR)
+   INTEGER :: Pivot(N), Direction, ioffset, j, istage
+   LOGICAL :: RejectLastH, RejectMoreH, Singular
+!~~~>  Local parameters
+   REAL(kind=dp), PARAMETER :: ZERO = 0.0_dp, ONE  = 1.0_dp
+   REAL(kind=dp), PARAMETER :: DeltaMin = 1.0E-5_dp
+!~~~>  Locally called functions
+!    REAL(kind=dp) WLAMCH
+!    EXTERNAL WLAMCH
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   REAL(dp) :: Atmp(LU_NONZERO) = 0._dp
+   REAL(dp) :: Btmp(NVAR) = 0._dp
+
+!~~~>  Initial preparations
+   DO_FUN  = .true.
+   T = Tstart
+   RSTATUS(Nhexit) = ZERO
+   H = MIN( MAX(ABS(Hmin),ABS(Hstart)) , ABS(Hmax) )
+   IF (ABS(H) <= 10.0_dp*Roundoff) H = DeltaMin
+
+   IF (Tend  >=  Tstart) THEN
+     Direction = +1
+   ELSE
+     Direction = -1
+   END IF
+   H = Direction*H
+
+   RejectLastH=.FALSE.
+   RejectMoreH=.FALSE.
+
+!~~~> Time loop begins below
+
+TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
+       .OR. (Direction < 0).AND.((Tend-T)+Roundoff <= ZERO) )
+
+   IF ( ISTATUS(Nstp) > Max_no_steps ) THEN  ! Too many steps
+      CALL ros_ErrorMsg(-6,T,H,IERR)
+      RETURN
+   END IF
+   IF ( ((T+0.1_dp*H) == T).OR.(H <= Roundoff) ) THEN  ! Step size too small
+      CALL ros_ErrorMsg(-7,T,H,IERR)
+      RETURN
+   END IF
+
+!~~~>  Limit H if necessary to avoid going beyond Tend
+   H = MIN(H,ABS(Tend-T))
+
+!~~~>   Compute the function at current time
+   CALL FunSplitTemplate(T,Y,Fcn0) ! Reacts to DO_FUN()
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
    
+!~~~>  Parse species for reduced computation
+   CALL Reduce( 1.d2, Fcn0 )
+   write(*,*) '<<>>: ', rNVAR, cNONZERO
+
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
       CALL ros_FunTimeDerivative ( T, Roundoff, Y, &
@@ -595,7 +808,7 @@ Stage: DO istage = 1, ros_S
 ! --- --- ---
          END DO
          Tau = T + ros_Alpha(istage)*Direction*H
-         CALL FunTemplate(Tau,Ynew,Fcn)
+         CALL FunSplitTemplate(Tau,Ynew,Fcn)
          ISTATUS(Nfun) = ISTATUS(Nfun) + 1
        END IF ! if istage == 1 elseif ros_NewF(istage)
        !slim: CALL WCOPY(N,Fcn,1,K(ioffset+1),1)
@@ -608,7 +821,7 @@ Stage: DO istage = 1, ros_S
          HG = Direction*H*ros_Gamma(istage)
          CALL WAXPY(rNVAR,HG,dFdT,1,K(ioffset+1),1)
       END IF
-      CALL ros_Solve(Ghimj, Pivot, K(ioffset+1), Atmp, Btmp, JVS_MAP, SPC_MAP)
+      CALL ros_cSolve(Ghimj, Pivot, K(ioffset+1), Atmp, Btmp, JVS_MAP, SPC_MAP)
        
    END DO Stage
 
@@ -685,7 +898,7 @@ Stage: DO istage = 1, ros_S
 !~~~> Succesful exit
    IERR = 1  !~~~> The integration was successful
 
-  END SUBROUTINE ros_Integrator
+ END SUBROUTINE ros_cIntegrator
 
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -739,7 +952,7 @@ Stage: DO istage = 1, ros_S
    REAL(kind=dp), PARAMETER :: ONE = 1.0_dp, DeltaMin = 1.0E-6_dp
 
    Delta = SQRT(Roundoff)*MAX(DeltaMin,ABS(T))
-   CALL FunTemplate(T+Delta,Y,dFdT)
+   CALL FunSplitTemplate(T+Delta,Y,dFdT)
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
    CALL WAXPY(N,(-ONE),Fcn0,1,dFdT,1)
    CALL WSCAL(N,(ONE/Delta),dFdT,1)
@@ -748,7 +961,7 @@ Stage: DO istage = 1, ros_S
 
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE ros_PrepareMatrix ( H, Direction, gam, &
+  SUBROUTINE ros_cPrepareMatrix ( H, Direction, gam, &
              Jac0, Ghimj, Pivot, Singular )
 ! --- --- --- --- --- --- --- --- --- --- --- --- ---
 !  Prepares the LHS matrix for stage calculations
@@ -826,11 +1039,11 @@ Stage: DO istage = 1, ros_S
 
    END DO ! WHILE Singular
 
-  END SUBROUTINE ros_PrepareMatrix
+ END SUBROUTINE ros_cPrepareMatrix
 
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE ros_Decomp( A, Pivot, ISING )
+  SUBROUTINE ros_cDecomp( A, Pivot, ISING )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !  Template for the LU decomposition
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -852,11 +1065,11 @@ Stage: DO istage = 1, ros_S
 #endif
    ISTATUS(Ndec) = ISTATUS(Ndec) + 1
 
-  END SUBROUTINE ros_Decomp
-
+ END SUBROUTINE ros_cDecomp
+ 
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE ros_Solve( A, Pivot, b, Atmp, Btmp, map1, map2 )
+  SUBROUTINE ros_cSolve( A, Pivot, b, Atmp, Btmp, map1, map2 )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !  Template for the forward/backward substitution (using pre-computed LU decomposition)
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -887,6 +1100,143 @@ Stage: DO istage = 1, ros_S
 !   call cWCOPY(rNVAR,NVAR,B,1,Btmp,1,map2)
    CALL KppSolve( Atmp, btmp )
    b = btmp(map2)
+#endif
+
+   ISTATUS(Nsol) = ISTATUS(Nsol) + 1
+
+  END SUBROUTINE ros_cSolve
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  SUBROUTINE ros_PrepareMatrix ( H, Direction, gam, &
+             Jac0, Ghimj, Pivot, Singular )
+! --- --- --- --- --- --- --- --- --- --- --- --- ---
+!  Prepares the LHS matrix for stage calculations
+!  1.  Construct Ghimj = 1/(H*ham) - Jac0
+!      "(Gamma H) Inverse Minus Jacobian"
+!  2.  Repeat LU decomposition of Ghimj until successful.
+!       -half the step size if LU decomposition fails and retry
+!       -exit after 5 consecutive fails
+! --- --- --- --- --- --- --- --- --- --- --- --- ---
+   IMPLICIT NONE
+
+!~~~> Input arguments
+#ifdef FULL_ALGEBRA    
+   REAL(kind=dp), INTENT(IN) ::  Jac0(N,N)
+#else
+   REAL(kind=dp), INTENT(IN) ::  Jac0(LU_NONZERO)
+#endif   
+   REAL(kind=dp), INTENT(IN) ::  gam
+   INTEGER, INTENT(IN) ::  Direction
+!~~~> Output arguments
+#ifdef FULL_ALGEBRA    
+   REAL(kind=dp), INTENT(OUT) :: Ghimj(N,N)
+#else
+   REAL(kind=dp), INTENT(OUT) :: Ghimj(LU_NONZERO)
+#endif   
+   LOGICAL, INTENT(OUT) ::  Singular
+   INTEGER, INTENT(OUT) ::  Pivot(N)
+!~~~> Inout arguments
+   REAL(kind=dp), INTENT(INOUT) :: H   ! step size is decreased when LU fails
+!~~~> Local variables
+   INTEGER  :: i, ISING, Nconsecutive
+   REAL(kind=dp) :: ghinv
+   REAL(kind=dp), PARAMETER :: ONE  = 1.0_dp, HALF = 0.5_dp
+
+   Nconsecutive = 0
+   Singular = .TRUE.
+
+   DO WHILE (Singular)
+
+!~~~>    Construct Ghimj = 1/(H*gam) - Jac0
+#ifdef FULL_ALGEBRA    
+     !slim: CALL WCOPY(N*N,Jac0,1,Ghimj,1)
+     !slim: CALL WSCAL(N*N,(-ONE),Ghimj,1)
+     Ghimj = -Jac0
+     ghinv = ONE/(Direction*H*gam)
+     DO i=1,N
+       Ghimj(i,i) = Ghimj(i,i)+ghinv
+     END DO
+#else
+     !slim: CALL WCOPY(LU_NONZERO,Jac0,1,Ghimj,1)
+     !slim: CALL WSCAL(LU_NONZERO,(-ONE),Ghimj,1)
+     Ghimj(1:LU_NONZERO) = -Jac0(1:LU_NONZERO)
+     ghinv = ONE/(Direction*H*gam)
+     DO i=1,N
+       Ghimj(LU_DIAG(i)) = Ghimj(LU_DIAG(i))+ghinv
+     END DO
+#endif   
+!~~~>    Compute LU decomposition
+     CALL ros_Decomp( Ghimj, Pivot, ISING )
+     IF (ISING == 0) THEN
+!~~~>    If successful done
+        Singular = .FALSE.
+     ELSE ! ISING .ne. 0
+!~~~>    If unsuccessful half the step size; if 5 consecutive fails then return
+        ISTATUS(Nsng) = ISTATUS(Nsng) + 1
+        Nconsecutive = Nconsecutive+1
+        Singular = .TRUE.
+        PRINT*,'Warning: LU Decomposition returned ISING = ',ISING
+        IF (Nconsecutive <= 5) THEN ! Less than 5 consecutive failed decompositions
+           H = H*HALF
+        ELSE  ! More than 5 consecutive failed decompositions
+           RETURN
+        END IF  ! Nconsecutive
+      END IF    ! ISING
+
+   END DO ! WHILE Singular
+
+  END SUBROUTINE ros_PrepareMatrix
+
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  SUBROUTINE ros_Decomp( A, Pivot, ISING )
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!  Template for the LU decomposition
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   IMPLICIT NONE
+!~~~> Inout variables
+#ifdef FULL_ALGEBRA    
+   REAL(kind=dp), INTENT(INOUT) :: A(N,N)
+#else   
+   REAL(kind=dp), INTENT(INOUT) :: A(LU_NONZERO)
+#endif
+!~~~> Output variables
+   INTEGER, INTENT(OUT) :: Pivot(N), ISING
+
+#ifdef FULL_ALGEBRA    
+   CALL  DGETRF( N, N, A, N, Pivot, ISING )
+#else   
+   CALL KppDecomp ( A, ISING )
+   Pivot(1) = 1
+#endif
+   ISTATUS(Ndec) = ISTATUS(Ndec) + 1
+
+  END SUBROUTINE ros_Decomp
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  SUBROUTINE ros_Solve( A, Pivot, b )
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!  Template for the forward/backward substitution (using pre-computed LU decomposition)
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   IMPLICIT NONE
+!~~~> Input variables
+#ifdef FULL_ALGEBRA    
+   REAL(kind=dp), INTENT(IN) :: A(N,N)
+   INTEGER :: ISING
+#else   
+   REAL(kind=dp), INTENT(IN) :: A(LU_NONZERO)
+#endif
+   INTEGER, INTENT(IN) :: Pivot(N)
+!~~~> InOut variables
+   REAL(kind=dp), INTENT(INOUT) :: b(N)
+
+#ifdef FULL_ALGEBRA    
+   CALL  DGETRS( 'N', N , 1, A, N, Pivot, b, N, ISING )
+   IF ( Info < 0 ) THEN
+      PRINT*,"Error in DGETRS. ISING=",ISING
+   END IF  
+#else   
+   CALL KppSolve( A, b )
 #endif
 
    ISTATUS(Nsol) = ISTATUS(Nsol) + 1
@@ -1321,28 +1671,32 @@ END SUBROUTINE cRosenbrock
 
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SUBROUTINE FunTemplate( T, Y, Ydot )
+SUBROUTINE FunSplitTemplate( T, Y, Ydot, P_VAR, D_VAR )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !  Template for the ODE function call.
 !  Updates the rate coefficients (and possibly the fixed species) at each call
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  USE gckpp_Parameters, ONLY: NVAR, LU_NONZERO
  USE gckpp_Global, ONLY: FIX, RCONST, TIME
- USE gckpp_Function, ONLY: Fun
+ USE gckpp_Function, ONLY: Fun_SPLIT
 !~~~> Input variables
    REAL(kind=dp) :: T, Y(NVAR)
 !~~~> Output variables
    REAL(kind=dp) :: Ydot(NVAR)
+   REAL(kind=dp), OPTIONAL :: P_VAR(NVAR), D_VAR(NVAR)
 !~~~> Local variables
-   REAL(kind=dp) :: Told
+   REAL(kind=dp) :: Told, P(NVAR), D(NVAR)
 
    Told = TIME
    TIME = T
-   CALL Fun( Y, FIX, RCONST, Ydot )
+   CALL Fun_SPLIT( Y, FIX, RCONST, P, D )
+   Ydot = P - D*y
    TIME = Told
+   
+   IF (Present(P_VAR)) P_VAR=P
+   IF (Present(D_VAR)) D_VAR=D
 
-END SUBROUTINE FunTemplate
-
+ END SUBROUTINE FunSplitTemplate
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SUBROUTINE JacTemplate( T, Y, Jcb )
@@ -1504,6 +1858,64 @@ END SUBROUTINE cWAXPY
 
       END SUBROUTINE cWCOPY
 
+      SUBROUTINE REDUCE(threshold,dcdt)
+        
+        USE gckpp_JacobianSP
+
+        REAL(dp), INTENT(IN) :: dcdt(NVAR), threshold
+        INTEGER              :: iSPC_MAP(NVAR)
+        INTEGER              :: i, ii, iii, idx, nrmv, s
+
+        iSPC_MAP = 0
+        
+        NRMV = 0
+        S    = 1
+        do i=1,NVAR
+           if (abs(dcdt(i)).le.threshold) then
+              NRMV=NRMV+1
+              DO_SLV(i) = .false.
+              DO_FUN(i) = .false.
+              cycle
+           endif
+           SPC_MAP(S)  = i
+           iSPC_MAP(i) = S
+           S=S+1
+        ENDDO
+        rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
+        
+        II  = 1
+        III = 1
+        idx = 0
+        DO i = 1,LU_NONZERO
+           IF ((DO_SLV(LU_IROW(i))).and.(DO_SLV(LU_ICOL(i)))) THEN
+              idx=idx+1
+              cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
+              cLU_ICOL(idx) = iSPC_MAP(LU_ICOL(i))
+              JVS_MAP(idx)  = i
+              
+              IF (idx.gt.1) THEN
+                 IF (cLU_IROW(idx).ne.cLU_IROW(idx-1)) THEN
+                    II=II+1
+                    cLU_CROW(II) = idx
+                 ENDIF
+                 IF (cLU_IROW(idx).eq.cLU_ICOL(idx)) THEN
+                    III=III+1
+                    cLU_DIAG(III) = idx
+                 ENDIF
+              ENDIF
+              cycle
+           ENDIF
+           DO_JVS(i) = .false.
+        ENDDO
+        
+        cNONZERO = idx
+        
+        cLU_CROW(1)       = 1 ! 1st index = 1
+        cLU_DIAG(1)       = 1 ! 1st index = 1
+        cLU_CROW(rNVAR+1) = cNONZERO+1
+        cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
+      END SUBROUTINE REDUCE
+      
 END MODULE compact_Integrator
 
 
