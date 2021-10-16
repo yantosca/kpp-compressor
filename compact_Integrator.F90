@@ -706,7 +706,7 @@ Stage: DO istage = 1, ros_S
    REAL(kind=dp) :: H, Hnew, HC, HG, Fac, Tau
    REAL(kind=dp) :: Err, Yerr(N), Yerrsub(NVAR)
    INTEGER :: Pivot(N), Direction, ioffset, j, istage
-   LOGICAL :: RejectLastH, RejectMoreH, Singular
+   LOGICAL :: RejectLastH, RejectMoreH, Singular, Reduced
 !~~~>  Local parameters
    REAL(kind=dp), PARAMETER :: ZERO = 0.0_dp, ONE  = 1.0_dp
    REAL(kind=dp), PARAMETER :: DeltaMin = 1.0E-5_dp
@@ -720,6 +720,7 @@ Stage: DO istage = 1, ros_S
 
 !~~~>  Initial preparations
    DO_FUN  = .true.
+   Reduced = .false.
    T = Tstart
    RSTATUS(Nhexit) = ZERO
    H = MIN( MAX(ABS(Hmin),ABS(Hstart)) , ABS(Hmax) )
@@ -757,9 +758,10 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
    
 !~~~>  Parse species for reduced computation
-   CALL Reduce( 1.d2, Fcn0 )
-   write(*,*) '<<>>: ', rNVAR, cNONZERO
-
+   if (.not. reduced) then
+      CALL Reduce( 1.d2, Fcn0 )
+      reduced = .true.
+   endif
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
       CALL ros_FunTimeDerivative ( T, Roundoff, Y, &
@@ -773,8 +775,8 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
 !~~~>  Repeat step calculation until current step accepted
 UntilAccepted: DO
 
-   CALL ros_PrepareMatrix(H,Direction,ros_Gamma(1), &
-          Jac0,Ghimj,Pivot,Singular) ! Note, not Ghimj(LU_NONZERO), its sized Ghimj(cNONZERO)
+   CALL ros_cPrepareMatrix(H,Direction,ros_Gamma(1), &
+          Jac0,Ghimj(1:cNONZERO),Pivot,Singular) ! Note, not Ghimj(LU_NONZERO), its sized Ghimj(cNONZERO)
 
    IF (Singular) THEN ! More than 5 consecutive failed decompositions
        CALL ros_ErrorMsg(-8,T,H,IERR)
@@ -1020,7 +1022,7 @@ Stage: DO istage = 1, ros_S
      END DO
 #endif   
 !~~~>    Compute LU decomposition
-     CALL ros_Decomp( Ghimj, Pivot, ISING )
+     CALL ros_cDecomp( Ghimj, Pivot, ISING )
      IF (ISING == 0) THEN
 !~~~>    If successful done
         Singular = .FALSE.
