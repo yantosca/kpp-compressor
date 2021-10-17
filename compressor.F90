@@ -275,7 +275,7 @@ CONTAINS
  end subroutine fullmech
 
   subroutine compactedmech()
-    USE compact_Integrator
+    USE gckpp_Integrator
     USE GCKPP_RATES
     USE GCKPP_INITIALIZE
 
@@ -325,7 +325,7 @@ CONTAINS
           ! Set RCONST
           call Update_RCONST()
           ! Integrate
-          CALL cIntegrate( TIN,    TOUT,    ICNTRL,      &
+          CALL Integrate( TIN,    TOUT,    ICNTRL,      &
                RCNTRL, ISTATUS, RSTATE, IERR )
           C(1:NVAR)       = VAR(:)
 !          write(*,*) ISTATUS
