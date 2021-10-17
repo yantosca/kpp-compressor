@@ -50,10 +50,6 @@ program main
 
   lim = 1e2
 
-  ALLOCATE(tDO_SLV(NVAR+1))
-  ALLOCATE(tDO_FUN(NVAR))
-  ALLOCATE(tDO_JVS(LU_NONZERO))
-
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
@@ -75,76 +71,12 @@ program main
   call set_quantssfc(dcdt,Cinit,R)
 !  call set_quants_uppertrop(dcdt,Cinit,R)
 
-!<<>>  call cpu_time(start)
-!<<>>
-!<<>>  tDO_SLV  = .true.
-!<<>>  tDO_FUN  = .true.
-!<<>>  tDO_JVS  = .true.
-!<<>>
-!<<>>  iSPC_MAP = 0
-!<<>>
-!<<>>  call Fun ( Cinit(1:NVAR), Cinit(NVAR+1:NSPEC), R, dcdt, A )
-!<<>>    
-!<<>>  NRMV = 0
-!<<>>  S    = 1
-!<<>>  do i=1,NVAR
-!<<>>     if (abs(dcdt(i)).le.lim) then
-!<<>>        NRMV=NRMV+1
-!<<>>        tDO_SLV(i) = .false.
-!<<>>        tDO_FUN(i) = .false.
-!<<>>        cycle
-!<<>>     endif
-!<<>>     SPC_MAP(S)  = i
-!<<>>     iSPC_MAP(i) = S
-!<<>>     S=S+1
-!<<>>  ENDDO
-!<<>>  rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
-!<<>>
-!<<>>  II  = 1
-!<<>>  III = 1
-!<<>>  idx = 0
-!<<>>  DO i = 1,LU_NONZERO
-!<<>>     IF ((tDO_SLV(LU_IROW(i))).and.(tDO_SLV(LU_ICOL(i)))) THEN
-!<<>>        idx=idx+1
-!<<>>        cLU_IROW(idx) = iSPC_MAP(LU_IROW(i))
-!<<>>        cLU_ICOL(idx) = iSPC_MAP(LU_ICOL(i))
-!<<>>        JVS_MAP(idx)  = i
-!<<>>        
-!<<>>        IF (idx.gt.1.and.(cLU_IROW(idx).ne.cLU_IROW(idx-1))) THEN
-!<<>>           II=II+1
-!<<>>           cLU_CROW(II) = idx
-!<<>>        ENDIF
-!<<>>        IF (idx.gt.1.and.cLU_IROW(idx).eq.cLU_ICOL(idx)) THEN
-!<<>>           III=III+1
-!<<>>           cLU_DIAG(III) = idx
-!<<>>        ENDIF
-!<<>>        cycle
-!<<>>     ENDIF
-!<<>>     tDO_JVS(i) = .false.
-!<<>>  ENDDO
-!<<>>  
-!<<>>  cNONZERO = idx
-!<<>>  
-!<<>>  cLU_CROW(1)       = 1 ! 1st index = 1
-!<<>>  cLU_DIAG(1)       = 1 ! 1st index = 1
-!<<>>  cLU_CROW(rNVAR+1) = cNONZERO+1
-!<<>>  cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
-!<<>>  
-!<<>>  call cpu_time(end)
-!<<>>  write(*,*) 'Setup time: ', real(end-start)
-!<<>>
-!<<>>  IF (OUTPUT) call showoutput()
-!<<>>  
   ! -------------------------------------------------------------------------- !
   ! 2. Run the full mechanism
 
   ! Make sure everything is calculated. This should be automatic if not running
   ! a compacted mech. (This is currently also done above, but repeated here for
   ! safety. -- MSL
-  DO_FUN = .true.
-  DO_SLV = .true.
-  DO_JVS = .true.
-
   write(*,*) ' '
   write(*,*) 'Running the full mechanism for initialization'
   call fullmech() ! initialization run
@@ -386,13 +318,13 @@ CONTAINS
   write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
   write(*,*) ' '
   write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
-  write(*,'(a,'//nv//'l4)') ' DO_SLV:   ', tDO_SLV
+  write(*,'(a,'//nv//'l4)') ' DO_SLV:   ', DO_SLV
   write(*,*) ' '
   write(*,*) 'DO_FUN controls the terms that will be computed in Fun(): 1=compute, 0=skip'
-  write(*,'(a,'//nv//'l4)') ' DO_FUN:   ', tDO_FUN
+  write(*,'(a,'//nv//'l4)') ' DO_FUN:   ', DO_FUN
   write(*,*) ' '
   write(*,*) 'DO_JVS controls the terms that will be computed in Jac_SP(): 1=compute, 0=skip'
-  write(*,'(a,'//lunz//'l4)') ' DO_JVS:   ', tDO_JVS
+  write(*,'(a,'//lunz//'l4)') ' DO_JVS:   ', DO_JVS
 
   end subroutine showoutput
 
