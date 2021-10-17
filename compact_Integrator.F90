@@ -942,7 +942,7 @@ Stage: DO istage = 1, ros_S
    USE GCKPP_GLOBAL, ONLY : RCONST
    REAL(kind=dp), INTENT(INOUT) :: Y
    REAL(kind=dp), INTENT(IN)    :: P,Ti,Tf
-   INTEGER                      :: i
+   INTEGER, INTENT(IN)          :: i
 
    IF (RCONST(i) .eq. 0.d0) return
    Y = (P/RCONST(i))+(Y-(P/RCONST(i)))*exp(-RCONST(i)*(Tf-Ti))
