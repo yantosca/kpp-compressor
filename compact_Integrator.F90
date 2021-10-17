@@ -259,9 +259,9 @@ SUBROUTINE cRosenbrock(N,Y,Tstart,Tend, &
 !~~~>  Local variables
    REAL(kind=dp) :: Roundoff, FacMin, FacMax, FacRej, FacSafe
    REAL(kind=dp) :: Hmin, Hmax, Hstart
-   REAL(kind=dp) :: Texit
+   REAL(kind=dp) :: Texit, Redux_Threshold
    INTEGER       :: i, UplimTol, Max_no_steps
-   LOGICAL       :: Autonomous, VectorTol
+   LOGICAL       :: Autonomous, VectorTol, Autoreduce
 !~~~>   Parameters
    REAL(kind=dp), PARAMETER :: ZERO = 0.0_dp, ONE  = 1.0_dp
    REAL(kind=dp), PARAMETER :: DeltaMin = 1.0E-5_dp
@@ -313,6 +313,10 @@ SUBROUTINE cRosenbrock(N,Y,Tstart,Tend, &
       CALL ros_ErrorMsg(-1,Tstart,ZERO,IERR)
       RETURN
    END IF
+
+!~~~> Auto-reduction toggle
+   Autoreduce    = .false.
+   IF (ICNTRL(8) == 1) Autoreduce = .true.
 
 !~~~>  Unit roundoff (1+Roundoff>1)
    Roundoff = WLAMCH('E')
@@ -396,17 +400,36 @@ SUBROUTINE cRosenbrock(N,Y,Tstart,Tend, &
         RETURN
       END IF
     END DO
-
-
-!~~~>  CALL Rosenbrock method
-   CALL ros_cIntegrator(Y, Tstart, Tend, Texit,   &
-        AbsTol, RelTol,                          &
-!  Integration parameters
-        Autonomous, VectorTol, Max_no_steps,     &
-        Roundoff, Hmin, Hmax, Hstart,            &
-        FacMin, FacMax, FacRej, FacSafe,         &
-!  Error indicator
-        IERR)
+!~~~> Auto-reduction threshold
+    Redux_threshold = 1.d2
+    IF (RCNTRL(8) > ZERO) THEN
+       Redux_Threshold = RCNTRL(8)
+    ELSEIF (RCNTRL(8) < ZERO) THEN
+       PRINT *, 'Auto-reduction Threshold < 0. Defaulting to ', Redux_Threshold
+    ENDIF
+!~~~>  CALL Auto-reducing Rosenbrock method
+    IF ( Autoreduce ) &
+         CALL ros_cIntegrator(Y, Tstart, Tend, Texit,   &
+         AbsTol, RelTol,                          &
+         !  Integration parameters
+         Autonomous, VectorTol, Max_no_steps,     &
+         Roundoff, Hmin, Hmax, Hstart,            &
+         FacMin, FacMax, FacRej, FacSafe,         &
+         ! Autorecuce threshold
+         redux_threshold,                         &
+         !  Error indicator
+         IERR)
+    
+!~~~>  CALL Normal Rosenbrock method
+    IF ( .not. Autoreduce ) &
+         CALL ros_Integrator(Y, Tstart, Tend, Texit,   &
+         AbsTol, RelTol,                          &
+         !  Integration parameters
+         Autonomous, VectorTol, Max_no_steps,     &
+         Roundoff, Hmin, Hmax, Hstart,            &
+         FacMin, FacMax, FacRej, FacSafe,         &
+         !  Error indicator
+         IERR)
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CONTAINS !  SUBROUTINES internal to Rosenbrock
@@ -667,6 +690,8 @@ Stage: DO istage = 1, ros_S
         Autonomous, VectorTol, Max_no_steps,     &
         Roundoff, Hmin, Hmax, Hstart,            &
         FacMin, FacMax, FacRej, FacSafe,         &
+!~~~> Autorecuce threshold
+        threshold,                               &
 !~~~> Error indicator
         IERR )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -693,6 +718,8 @@ Stage: DO istage = 1, ros_S
    REAL(kind=dp), INTENT(IN) :: Hstart, Hmin, Hmax
    INTEGER, INTENT(IN) :: Max_no_steps
    REAL(kind=dp), INTENT(IN) :: Roundoff, FacMin, FacMax, FacRej, FacSafe
+!~~~> Autoreduction threshold
+   REAL(kind=dp), INTENT(IN) :: threshold
 !~~~> Output: Error indicator
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables
@@ -754,12 +781,12 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    H = MIN(H,ABS(Tend-T))
 
 !~~~>   Compute the function at current time
-   CALL FunSplitTemplate(T,Y,Fcn0) ! Reacts to DO_FUN()
+   CALL FunSplitTemplate(T,Y,Fcn0,Prod,Loss) ! Reacts to DO_FUN()
    ISTATUS(Nfun) = ISTATUS(Nfun) + 1
    
 !~~~>  Parse species for reduced computation
    if (.not. reduced) then
-      CALL Reduce( 1.d2, Fcn0 )
+      CALL Reduce( threshold, Fcn0 )
       reduced = .true.
    endif
 !~~~>  Compute the function derivative with respect to T
@@ -893,15 +920,33 @@ Stage: DO istage = 1, ros_S
    END IF ! Err <= 1
 
    END DO UntilAccepted
-
    
    END DO TimeLoop
+
+   ! 1st order calculation for removed species per Shen et al. (2020) Eq. 4
+   ! -- currently, DO_FUN() selects
+   ! -- DO_FUN loops over 1,NVAR. Only needs to loop over NVAR-rNVAR
+   !    but the structure doesn't exist. Maybe worth considering 
+   !    for efficiency purposes.
+   DO i=1,NVAR
+      IF (.not. DO_FUN(i)) &
+           call autoreduce_1stOrder(i,Y(i),Prod(i),Tstart,Tend)
+   ENDDO
 
 !~~~> Succesful exit
    IERR = 1  !~~~> The integration was successful
 
  END SUBROUTINE ros_cIntegrator
 
+ SUBROUTINE AutoReduce_1stOrder(i,Y,P,Ti,Tf)
+   USE GCKPP_GLOBAL, ONLY : RCONST
+   REAL(kind=dp), INTENT(INOUT) :: Y
+   REAL(kind=dp), INTENT(IN)    :: P,Ti,Tf
+   INTEGER                      :: i
+
+   IF (RCONST(i) .eq. 0.d0) return
+   Y = (P/RCONST(i))+(Y-(P/RCONST(i)))*exp(-RCONST(i)*(Tf-Ti))
+ END SUBROUTINE AutoReduce_1stOrder
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   REAL(kind=dp) FUNCTION ros_ErrorNorm ( Y, Ynew, Yerr, &

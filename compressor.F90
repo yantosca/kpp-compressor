@@ -292,6 +292,9 @@ CONTAINS
     ICNTRL(3) = 4
     ICNTRL(7) = 1
     
+    ICNTRL(8) = 1
+!    RCNTRL(8) = !default is 1.d2
+
     ! Tolerances
     ATOL      = 1e-2_dp    
     RTOL      = 1e-2_dp
