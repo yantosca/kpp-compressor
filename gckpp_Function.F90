@@ -22,6 +22,7 @@
 
 MODULE gckpp_Function
 
+  USE gckpp_Global, only : DO_FUN
   USE gckpp_Parameters
   IMPLICIT NONE
 
@@ -33,20 +34,18 @@ CONTAINS
 
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-!
-! Fun - time derivatives of variables - Aggregate form
+! 
+! Fun_SPLIT - time derivatives of variables - Split form
 !   Arguments :
 !      V         - Concentrations of variable species (local)
 !      F         - Concentrations of fixed species (local)
 !      RCT       - Rate constants (local)
-!      Vdot      - Time derivative of variable species concentrations
-!      Aout      - Array to return rxn rates for diagnostics (OPTIONAL)
-!
+!      P_VAR     - Production term
+!      D_VAR     - Destruction term
+! 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
-
- USE gckpp_JacobianSP, only : DO_FUN
+SUBROUTINE Fun_SPLIT ( V, F, RCT, P_VAR, D_VAR )
 
 ! V - Concentrations of variable species (local)
   REAL(kind=dp) :: V(NVAR)
@@ -54,11 +53,11 @@ SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
   REAL(kind=dp) :: F(NFIX)
 ! RCT - Rate constants (local)
   REAL(kind=dp) :: RCT(NREACT)
-! Vdot - Time derivative of variable species concentrations
-  REAL(kind=dp) :: Vdot(NVAR)
-!### KPP 2.3.0_gc, Bob Yantosca (11 Feb 2021)
-!### Aout - Array for returning KPP reaction rates for diagnostics
-  REAL(kind=dp), OPTIONAL :: Aout(NREACT)
+! P_VAR - Production term
+  REAL(kind=dp) :: P_VAR(NVAR)
+! D_VAR - Destruction term
+  REAL(kind=dp) :: D_VAR(NVAR)
+
 
 ! Computation of equation rates
   A(1) = RCT(1)*V(9)
@@ -74,41 +73,139 @@ SUBROUTINE Fun ( V, F, RCT, Vdot, Aout )
   A(11) = RCT(11)*V(8)*V(11)
   A(12) = RCT(12)*V(8)*V(12)
 
-
-!### KPP 2.3.0_gc, Bob Yantosca (11 Feb 2021)
-!### Use Aout to return reaction rates
-  IF ( PRESENT( Aout ) ) Aout = A
-
-
-! Aggregate function
+! Production function
 IF (DO_FUN(1)) &
-  Vdot(1) = A(3)
+  P_VAR(1) = A(3)
 IF (DO_FUN(2)) &
-  Vdot(2) = A(12)
+  P_VAR(2) = A(12)
 IF (DO_FUN(3)) &
-  Vdot(3) = A(9)+A(11)
+  P_VAR(3) = A(9)+A(11)
 IF (DO_FUN(4)) &
-  Vdot(4) = A(1)+A(2)+A(6)+2*A(10)+A(11)
+  P_VAR(4) = A(1)+A(2)+A(6)+2*A(10)+A(11)
 IF (DO_FUN(5)) &
-  Vdot(5) = -A(8)
+  P_VAR(5) = 0
 IF (DO_FUN(6)) &
-  Vdot(6) = -A(3)+A(8)
+  P_VAR(6) = A(8)
 IF (DO_FUN(7)) &
-  Vdot(7) = A(6)-A(7)-A(9)
+  P_VAR(7) = A(6)
 IF (DO_FUN(8)) &
-  Vdot(8) = 2*A(1)-A(3)+A(4)+2*A(7)-A(8)-A(9)+A(10)-A(11)-A(12)
+  P_VAR(8) = 2*A(1)+A(4)+2*A(7)+A(10)
 IF (DO_FUN(9)) &
-  Vdot(9) = -A(1)-A(2)+A(5)-A(10)
+  P_VAR(9) = A(5)
 IF (DO_FUN(10)) &
-  Vdot(10) = -A(2)-A(4)+A(5)
+  P_VAR(10) = A(5)
 IF (DO_FUN(11)) &
-  Vdot(11) = A(3)-A(4)-2*A(6)+A(8)+A(9)-A(10)-A(11)
+  P_VAR(11) = A(3)+A(8)+A(9)
 IF (DO_FUN(12)) &
-  Vdot(12) = A(2)+A(4)-A(5)-A(12)
-      
-END SUBROUTINE Fun
+  P_VAR(12) = A(2)+A(4)
 
-! End of Fun function
+! Destruction function
+IF (DO_FUN(1)) &
+  D_VAR(1) = 0
+IF (DO_FUN(2)) &
+  D_VAR(2) = 0
+IF (DO_FUN(3)) &
+  D_VAR(3) = 0
+IF (DO_FUN(4)) &
+  D_VAR(4) = 0
+IF (DO_FUN(5)) &
+  D_VAR(5) = RCT(8)*V(8)
+IF (DO_FUN(6)) &
+  D_VAR(6) = RCT(3)*V(8)
+IF (DO_FUN(7)) &
+  D_VAR(7) = RCT(7)+RCT(9)*V(8)
+IF (DO_FUN(8)) &
+  D_VAR(8) = RCT(3)*V(6)+RCT(8)*V(5)+RCT(9)*V(7)+RCT(11)*V(11)+RCT(12)*V(12)
+IF (DO_FUN(9)) &
+  D_VAR(9) = RCT(1)+RCT(2)*V(10)+RCT(10)*V(11)
+IF (DO_FUN(10)) &
+  D_VAR(10) = RCT(2)*V(9)+RCT(4)*V(11)
+IF (DO_FUN(11)) &
+  D_VAR(11) = RCT(4)*V(10)+RCT(6)*2*V(11)+RCT(10)*V(9)+RCT(11)*V(8)
+IF (DO_FUN(12)) &
+  D_VAR(12) = RCT(5)+RCT(12)*V(8)
+      
+END SUBROUTINE Fun_SPLIT
+
+! End of Fun_SPLIT function
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+! 
+! Flux - calculate production & loss terms from reaction flux
+!   Arguments :
+!      RR        - Flux for each equation
+!      P_VAR     - Production term
+!      D_VAR     - Destruction term
+! 
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SUBROUTINE Flux ( RR, P_VAR, D_VAR )
+
+! RR - Flux for each equation
+  REAL(kind=dp) :: RR(NREACT)
+! P_VAR - Production term
+  REAL(kind=dp) :: P_VAR(NVAR)
+! D_VAR - Destruction term
+  REAL(kind=dp) :: D_VAR(NVAR)
+
+
+! Production function
+IF (.not. DO_FUN(1)) &
+  P_VAR(1) = RR(3)
+IF (.not. DO_FUN(2)) &
+  P_VAR(2) = RR(12)
+IF (.not. DO_FUN(3)) &
+  P_VAR(3) = RR(9)+RR(11)
+IF (.not. DO_FUN(4)) &
+  P_VAR(4) = RR(1)+RR(2)+RR(6)+2*RR(10)+RR(11)
+IF (.not. DO_FUN(5)) &
+  P_VAR(5) = 0
+IF (.not. DO_FUN(6)) &
+  P_VAR(6) = RR(8)
+IF (.not. DO_FUN(7)) &
+  P_VAR(7) = RR(6)
+IF (.not. DO_FUN(8)) &
+  P_VAR(8) = 2*RR(1)+RR(4)+2*RR(7)+RR(10)
+IF (.not. DO_FUN(9)) &
+  P_VAR(9) = RR(5)
+IF (.not. DO_FUN(10)) &
+  P_VAR(10) = RR(5)
+IF (.not. DO_FUN(11)) &
+  P_VAR(11) = RR(3)+RR(8)+RR(9)
+IF (.not. DO_FUN(12)) &
+  P_VAR(12) = RR(2)+RR(4)
+
+! Destruction function
+IF (DO_FUN(1)) &
+  D_VAR(1) = 0
+IF (DO_FUN(2)) &
+  D_VAR(2) = 0
+IF (DO_FUN(3)) &
+  D_VAR(3) = 0
+IF (DO_FUN(4)) &
+  D_VAR(4) = 0
+IF (DO_FUN(5)) &
+  D_VAR(5) = RR(8)
+IF (DO_FUN(6)) &
+  D_VAR(6) = RR(3)
+IF (DO_FUN(7)) &
+  D_VAR(7) = RR(7)+RR(9)
+IF (DO_FUN(8)) &
+  D_VAR(8) = RR(3)+RR(8)+RR(9)+RR(11)+RR(12)
+IF (DO_FUN(9)) &
+  D_VAR(9) = RR(1)+RR(2)+RR(10)
+IF (DO_FUN(10)) &
+  D_VAR(10) = RR(2)+RR(4)
+IF (DO_FUN(11)) &
+  D_VAR(11) = RR(4)+2*RR(6)+RR(10)+RR(11)
+IF (DO_FUN(12)) &
+  D_VAR(12) = RR(5)+RR(12)
+      
+END SUBROUTINE Flux
+
+! End of Flux function
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

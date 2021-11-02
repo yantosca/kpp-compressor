@@ -22,6 +22,7 @@
 
 MODULE gckpp_Jacobian
 
+  USE gckpp_Global, ONLY: DO_JVS
   USE gckpp_Parameters
   USE gckpp_JacobianSP
 

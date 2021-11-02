@@ -22,6 +22,7 @@
 
 MODULE gckpp_LinearAlgebra
 
+  USE gckpp_Global, ONLY: DO_SLV
   USE gckpp_Parameters
   USE gckpp_JacobianSP
 

@@ -79,8 +79,8 @@ MODOBJ   = gckpp_Model.o
 INISRT   = gckpp_Initialize.F90
 INIOBJ 	 = gckpp_Initialize.o
 
-MAINSRC = compressor.F90   gckpp_Initialize.F90   gckpp_Integrator.F90 gckpp_Model.F90 compact_Integrator.F90
-MAINOBJ = compressor.o     gckpp_Initialize.o     gckpp_Integrator.o   gckpp_Model.o   compact_Integrator.o
+MAINSRC = compressor.F90   gckpp_Initialize.F90   gckpp_Integrator.F90 gckpp_Model.F90 #compact_Integrator.F90
+MAINOBJ = compressor.o     gckpp_Initialize.o     gckpp_Integrator.o   gckpp_Model.o   #compact_Integrator.o
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # User: modify the line below to include only the
@@ -96,7 +96,7 @@ ALLOBJ = $(GENOBJ) $(JACOBJ) $(FUNOBJ)  $(HESOBJ) $(STMOBJ) \
 all:    exe
 
 exe:	$(ALLOBJ) $(MAINOBJ) 
-	$(FC) $(FOPT) compressor.F90 gckpp_Integrator.o compact_Integrator.o $(ALLOBJ) $(LIBS) -o gckpp.exe
+	$(FC) $(FOPT) compressor.F90 gckpp_Integrator.o $(ALLOBJ) $(LIBS) -o gckpp.exe
 
 stochastic:$(ALLOBJ) $(STOCHOBJ) $(MAINOBJ)
 	$(FC) $(FOPT) $(ALLOBJ) $(STOCHOBJ) $(MAINOBJ) $(LIBS) \
@@ -171,14 +171,14 @@ gckpp_Util.o: gckpp_Util.F90  $(GENOBJ) gckpp_Monitor.o
 gckpp_Main.o: gckpp_Main.F90  $(ALLOBJ) gckpp_Initialize.o gckpp_Model.o gckpp_Integrator.o
 	$(FC) $(FOPT) -c $<
 
-gckpp_Model.o: gckpp_Model.F90  $(ALLOBJ) gckpp_Integrator.o compact_Integrator.o
+gckpp_Model.o: gckpp_Model.F90  $(ALLOBJ) gckpp_Integrator.o #compact_Integrator.o
 	$(FC) $(FOPT) -c $<
 
 gckpp_Integrator.o: gckpp_Integrator.F90  $(ALLOBJ)
 	$(FC) $(FOPT) -c $<
 
-compact_Integrator.o: compact_Integrator.F90  $(ALLOBJ)
-	$(FC) $(FOPT) -c $<
+#compact_Integrator.o: compact_Integrator.F90  $(ALLOBJ)
+#	$(FC) $(FOPT) -c $<
 
 compressor.o: compressor.F90 $(ALLOBJ)
 	$(FC) $(FOPT) -c $<

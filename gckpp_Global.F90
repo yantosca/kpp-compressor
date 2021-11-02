@@ -22,7 +22,7 @@
 
 MODULE gckpp_Global
 
-  USE gckpp_Parameters, ONLY: dp, NSPEC, NVAR, NFIX, NREACT
+  USE gckpp_Parameters, ONLY: dp, NSPEC, NVAR, NFIX, NREACT, LU_NONZERO
   PUBLIC
   SAVE
 
@@ -63,6 +63,28 @@ MODULE gckpp_Global
   REAL(kind=dp) :: STEPMAX
 ! CFACTOR - Conversion factor for concentration units
   REAL(kind=dp) :: CFACTOR
+! DO_JVS -
+  LOGICAL :: DO_JVS(LU_NONZERO)
+! DO_SLV -
+  LOGICAL :: DO_SLV(NVAR+1)
+! DO_FUN -
+  LOGICAL :: DO_FUN(NVAR)
+! cLU_IROW -
+  INTEGER :: cLU_IROW(LU_NONZERO)
+! cLU_ICOL -
+  INTEGER :: cLU_ICOL(LU_NONZERO)
+! cLU_CROW -
+  INTEGER :: cLU_CROW(NVAR+1)
+! cLU_DIAG -
+  INTEGER :: cLU_DIAG(NVAR+1)
+! JVS_MAP -
+  INTEGER :: JVS_MAP(LU_NONZERO)
+! SPC_MAP -
+  INTEGER :: SPC_MAP(NVAR)
+! rNVAR -
+  INTEGER :: rNVAR
+! cNONZERO -
+  INTEGER :: cNONZERO
 
 ! INLINED global variable declarations
 
