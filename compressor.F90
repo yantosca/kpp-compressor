@@ -38,18 +38,27 @@ program main
 
   LOGICAL              :: OUTPUT
   LOGICAL              :: FORCE_FULL ! Force cIntegrate() to use the full mechanim. Inelegantly done
-
+  LOGICAL              :: ReInit
+  
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
   OUTPUT     = .false.
   FORCE_FULL = .false.
+!  REINIT     = .true.  ! Reset C every NITR,NAVG iteration
+  REINIT     = .false. ! Let C evolve over the NITR, NAVG loop
 
   NITR = 1
-  NAVG = 200
+  NAVG = 50
 
-  lim = 1e2
+  lim = 5e2
 
+  R     = 0._dp
+  Cinit = 0._dp
+  cNONZERO = 0 ! Initialize number of nonzero elements in reduced mechanism
+
+  call set_quantssfc(dcdt,Cinit,R)
+!  call set_quants_uppertrop(dcdt,Cinit,R)
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
@@ -64,12 +73,6 @@ program main
   ! -- -- -- recompute LU_ICOL
   ! -- -- -- Count the number of nonzero elements in the reduced LU diag
 
-  R     = 0._dp
-  Cinit = 0._dp
-  cNONZERO = 0 ! Initialize number of nonzero elements in reduced mechanism
-
-  call set_quantssfc(dcdt,Cinit,R)
-!  call set_quants_uppertrop(dcdt,Cinit,R)
 
   ! -------------------------------------------------------------------------- !
   ! 2. Run the full mechanism
@@ -96,7 +99,7 @@ program main
   ! - the compacted mechanism will still process the full species vector, 
   !   C(NVAR), not c(rNVAR), only dC/dt of inactive species is zero
 
-   call compactedmech()
+  call compactedmech()
   Credux = C
   write(*,*) SPC_NAMES(ind_O3), C(ind_O3), Cinit(ind_O3)
   write(*,*) SPC_NAMES(ind_OH), C(ind_OH), Cinit(ind_OH)
@@ -137,7 +140,7 @@ program main
   RRMS = sqrt(sum(((Credux(SPC_MAP(1:rNVAR))-Cfull(SPC_MAP(1:rNVAR)))/Cfull(SPC_MAP(1:rNVAR)))**2,&
        MASK=Cfull(SPC_MAP(1:rNVAR)).ne.0..and.Cfull(SPC_MAP(1:rNVAR)).gt.1e6_dp)/dble(rNVAR))
 
-  write(*,'(a,f5.1)') 'RRMS: ', 100.*RRMS
+  write(*,'(a,f8.1)') 'RRMS: ', 100.*RRMS
 
 CONTAINS
 
@@ -177,12 +180,13 @@ CONTAINS
     start        = 0.
     end          = 0.
 
+    if (.not. reinit) C(1:NSPEC) = Cinit(1:NSPEC)
     ! --- INTEGRATION & TIMING LOOP
     DO I=1,NAVG
        call cpu_time(start)
        DO N=1,NITR
+          if (reinit) C(1:NSPEC) = Cinit(1:NSPEC)
           ! Initialize
-          C(1:NSPEC) = Cinit(1:NSPEC)
           call Initialize()
           VAR(1:NVAR) = C(1:NVAR)
           FIX(1:NFIX) = C(NVAR+1:NSPEC)
@@ -225,7 +229,7 @@ CONTAINS
     ICNTRL(7) = 1
     
     ICNTRL(8) = 1
-!    RCNTRL(8) = !default is 1.d2
+    RCNTRL(8) = lim !default is 1.d2
 
     ! Tolerances
     ATOL      = 1e-2_dp    
@@ -245,12 +249,13 @@ CONTAINS
     start        = 0.
     end          = 0.
 
+    if (.not.reinit) C(1:NSPEC) = Cinit(1:NSPEC)
     ! --- INTEGRATION & TIMING LOOP
     DO I=1,NAVG ! Iterate to generate average comp time
        call cpu_time(start)
        DO N=1,NITR
+          if (reinit) C(1:NSPEC) = Cinit(1:NSPEC)
           ! Initialize
-          C(1:NSPEC) = Cinit(1:NSPEC)
           call Initialize()
           VAR = C(1:NVAR)
           FIX = C(NVAR+1:NSPEC)

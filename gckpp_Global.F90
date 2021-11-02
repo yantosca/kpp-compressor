@@ -64,21 +64,43 @@ MODULE gckpp_Global
   REAL(kind=dp) :: STEPMAX
 ! CFACTOR - Conversion factor for concentration units
   REAL(kind=dp) :: CFACTOR
+! DO_JVS -
+  LOGICAL :: DO_JVS(LU_NONZERO)
+! DO_SLV -
+  LOGICAL :: DO_SLV(NVAR+1)
+! DO_FUN -
+  LOGICAL :: DO_FUN(NVAR)
+! cLU_IROW -
+  INTEGER :: cLU_IROW(LU_NONZERO)
+! cLU_ICOL -
+  INTEGER :: cLU_ICOL(LU_NONZERO)
+! cLU_CROW -
+  INTEGER :: cLU_CROW(NVAR+1)
+! cLU_DIAG -
+  INTEGER :: cLU_DIAG(NVAR+1)
+! JVS_MAP -
+  INTEGER :: JVS_MAP(LU_NONZERO)
+! SPC_MAP -
+  INTEGER :: SPC_MAP(NVAR)
+! rNVAR -
+  INTEGER :: rNVAR
+! cNONZERO -
+  INTEGER :: cNONZERO
 
 ! INLINED global variable declarations
 
       REAL(kind=dp) :: R(NREACT)
-      LOGICAL :: DO_JVS(LU_NONZERO)
-      LOGICAL :: DO_SLV(NVAR+1)
-      LOGICAL :: DO_FUN(NVAR)
-      INTEGER :: cLU_IROW(LU_NONZERO)  ! Compacted ROW indexes
-      INTEGER :: cLU_ICOL(LU_NONZERO)  ! Compacted COL indexes
-      INTEGER :: cLU_CROW(NVAR+1)  ! Compacted compressed row vector
-      INTEGER :: cLU_DIAG(NVAR+1)  ! Compacted DIAG indexes
-      INTEGER :: JVS_MAP(LU_NONZERO)   ! Map to JVS from compacted sparse data
-      INTEGER :: SPC_MAP(NVAR)   ! Map species (for Fun(), etc.)
-      INTEGER :: rNVAR     ! Compacted number of variable species
-      INTEGER :: cNONZERO  ! Compacted number of non-zero elements in cJVS
+!>>      LOGICAL :: DO_JVS(LU_NONZERO)
+!>>      LOGICAL :: DO_SLV(NVAR+1)
+!>>      LOGICAL :: DO_FUN(NVAR)
+!>>      INTEGER :: cLU_IROW(LU_NONZERO)  ! Compacted ROW indexes
+!>>      INTEGER :: cLU_ICOL(LU_NONZERO)  ! Compacted COL indexes
+!>>      INTEGER :: cLU_CROW(NVAR+1)  ! Compacted compressed row vector
+!>>      INTEGER :: cLU_DIAG(NVAR+1)  ! Compacted DIAG indexes
+!>>      INTEGER :: JVS_MAP(LU_NONZERO)   ! Map to JVS from compacted sparse datMCRHP
+!>>      INTEGER :: SPC_MAP(NVAR)   ! Map species (for Fun(), etc.)
+!>>      INTEGER :: rNVAR     ! Compacted number of variable species
+!>>      INTEGER :: cNONZERO  ! Compacted number of non-zero elements in cJVS
 
 ! INLINED global variable declarations
 

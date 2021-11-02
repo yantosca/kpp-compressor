@@ -723,14 +723,14 @@ Stage: DO istage = 1, ros_S
 !~~~> Output: Error indicator
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables
-   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N), Prod(N), Loss(N)
+   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N), Prod(N), Prd0(N), Loss(N), Los0(N)
    REAL(kind=dp) :: K(NVAR*ros_S), dFdT(N)
 #ifdef FULL_ALGEBRA    
    REAL(kind=dp) :: Jac0(N,N), Ghimj(N,N)
 #else
    REAL(kind=dp) :: Jac0(LU_NONZERO), Ghimj(LU_NONZERO)
 #endif
-   REAL(kind=dp) :: H, Hnew, HC, HG, Fac, Tau
+   REAL(kind=dp) :: H, Hnew, Hold, HC, HG, Fac, Tau
    REAL(kind=dp) :: Err, Yerr(N), Yerrsub(NVAR)
    INTEGER :: Pivot(N), Direction, ioffset, j, istage
    LOGICAL :: RejectLastH, RejectMoreH, Singular, Reduced
@@ -746,8 +746,11 @@ Stage: DO istage = 1, ros_S
    REAL(dp) :: Btmp(NVAR) = 0._dp
 
 !~~~>  Initial preparations
+   DO_SLV  = .true.
    DO_FUN  = .true.
+   DO_JVS  = .true.
    Reduced = .false.
+
    T = Tstart
    RSTATUS(Nhexit) = ZERO
    H = MIN( MAX(ABS(Hmin),ABS(Hstart)) , ABS(Hmax) )
@@ -786,9 +789,17 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    
 !~~~>  Parse species for reduced computation
    if (.not. reduced) then
-      CALL Reduce( threshold, Fcn0 )
+      Prd0 = Prod ! Save the initial Prod vector for 1st order approx
+      Los0 = Loss ! Save the initial Loss vector for 1st order approx
+      CALL Reduce( threshold, Prd0, Los0*Y )
       reduced = .true.
    endif
+
+!   DO i=1,N
+!      IF (.not. DO_FUN(i)) &
+!           call autoreduce_1stOrder(i,Y(i),Prod(i),Loss(i),0.d0,H)
+!   ENDDO
+
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
       CALL ros_FunTimeDerivative ( T, Roundoff, Y, &
@@ -850,7 +861,7 @@ Stage: DO istage = 1, ros_S
          HG = Direction*H*ros_Gamma(istage)
          CALL WAXPY(rNVAR,HG,dFdT,1,K(ioffset+1),1)
       END IF
-      CALL ros_cSolve(Ghimj, Pivot, K(ioffset+1), Atmp, Btmp, JVS_MAP, SPC_MAP)
+      CALL ros_cSolve(Ghimj(1:cNONZERO), Pivot, K(ioffset+1), Atmp, Btmp, JVS_MAP, SPC_MAP)
        
    END DO Stage
 
@@ -907,6 +918,7 @@ Stage: DO istage = 1, ros_S
       RSTATUS(Ntexit) = T
       RejectLastH = .FALSE.
       RejectMoreH = .FALSE.
+      Hold = H
       H = Hnew
       EXIT UntilAccepted ! EXIT THE LOOP: WHILE STEP NOT ACCEPTED
    ELSE           !~~~> Reject step
@@ -921,6 +933,11 @@ Stage: DO istage = 1, ros_S
 
    END DO UntilAccepted
    
+   DO i=1,N
+      IF (.not. DO_FUN(i)) &
+           call autoreduce_1stOrder(i,Y(i),Prod(i),Loss(i),0.d0,Hold)
+   ENDDO
+
    END DO TimeLoop
 
    ! 1st order calculation for removed species per Shen et al. (2020) Eq. 4
@@ -928,24 +945,26 @@ Stage: DO istage = 1, ros_S
    ! -- DO_FUN loops over 1,NVAR. Only needs to loop over NVAR-rNVAR
    !    but the structure doesn't exist. Maybe worth considering 
    !    for efficiency purposes.
-   DO i=1,NVAR
-      IF (.not. DO_FUN(i)) &
-           call autoreduce_1stOrder(i,Y(i),Prod(i),Tstart,Tend)
-   ENDDO
+!   DO i=1,N
+!      IF (.not. DO_FUN(i)) &
+!           call autoreduce_1stOrder(i,Y(i),Prd0(i),Los0(i),Tstart,Tend)
+!   ENDDO
 
 !~~~> Succesful exit
    IERR = 1  !~~~> The integration was successful
 
  END SUBROUTINE ros_cIntegrator
 
- SUBROUTINE AutoReduce_1stOrder(i,Y,P,Ti,Tf)
-   USE gckpp_GLOBAL, ONLY : RCONST
+ SUBROUTINE AutoReduce_1stOrder(i,Y,P,k,Ti,Tf)
    REAL(kind=dp), INTENT(INOUT) :: Y
-   REAL(kind=dp), INTENT(IN)    :: P,Ti,Tf
+   REAL(kind=dp), INTENT(IN)    :: P,k,Ti,Tf
    INTEGER, INTENT(IN)          :: i
+   REAL(kind=dp)                :: term
 
-   IF (RCONST(i) .eq. 0.d0) return
-   Y = (P/RCONST(i))+(Y-(P/RCONST(i)))*exp(-RCONST(i)*(Tf-Ti))
+   if (k .le. 1.d-30) return
+   if (Y .le. 1.d-30) return
+   term = P/k
+   Y = term+(Y-term)*exp(-k*(Tf-Ti))
  END SUBROUTINE AutoReduce_1stOrder
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1131,7 +1150,7 @@ Stage: DO istage = 1, ros_S
    INTEGER, INTENT(IN) :: Pivot(N)
 !~~~> InOut variables
    REAL(kind=dp), INTENT(INOUT) :: b(rNVAR)
-   INTEGER, INTENT(IN)          :: map1(cNONZERO), map2(rNVAR)
+   INTEGER, INTENT(IN)          :: map1(LU_NONZERO), map2(NVAR)
    REAL(kind=dp)                :: btmp(N), Atmp(LU_NONZERO)
 
 #ifdef FULL_ALGEBRA    
@@ -1141,12 +1160,12 @@ Stage: DO istage = 1, ros_S
    END IF  
 #else   
 
-   Atmp(map1) = A
-   btmp(map2) = b
+   Atmp(map1(1:cNONZERO)) = A
+   btmp(map2(1:rNVAR)) = b
 !   call cWCOPY(cNONZERO,LU_NONZERO,A,1,Atmp,1,map1)
 !   call cWCOPY(rNVAR,NVAR,B,1,Btmp,1,map2)
    CALL KppSolve( Atmp, btmp )
-   b = btmp(map2)
+   b = btmp(map2(1:rNVAR))
 #endif
 
    ISTATUS(Nsol) = ISTATUS(Nsol) + 1
@@ -1736,6 +1755,8 @@ SUBROUTINE FunSplitTemplate( T, Y, Ydot, P_VAR, D_VAR )
 
    Told = TIME
    TIME = T
+   P = 0.d0
+   D = 0.d0
    CALL Fun_SPLIT( Y, FIX, RCONST, P, D )
    Ydot = P - D*y
    TIME = Told
@@ -1905,11 +1926,11 @@ END SUBROUTINE cWAXPY
 
       END SUBROUTINE cWCOPY
 
-      SUBROUTINE REDUCE(threshold,dcdt)
+      SUBROUTINE REDUCE(threshold,P,L)
         
         USE gckpp_JacobianSP
 
-        REAL(dp), INTENT(IN) :: dcdt(NVAR), threshold
+        REAL(dp), INTENT(IN) :: P(NVAR), L(NVAR), threshold
         INTEGER              :: iSPC_MAP(NVAR)
         INTEGER              :: i, ii, iii, idx, nrmv, s
 
@@ -1918,7 +1939,8 @@ END SUBROUTINE cWAXPY
         NRMV = 0
         S    = 1
         do i=1,NVAR
-           if (abs(dcdt(i)).le.threshold) then
+           if (abs(L(i)).lt.threshold .and. abs(P(i)).lt.threshold) then
+!           if (abs(P(i)-L(i)).le.threshold) then
               NRMV=NRMV+1
               DO_SLV(i) = .false.
               DO_FUN(i) = .false.
@@ -1965,11 +1987,6 @@ END SUBROUTINE cWAXPY
       
 END MODULE gckpp_Integrator
 
-
-
-
-! End of INTEGRATE function
-! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 ! End of INTEGRATE function
