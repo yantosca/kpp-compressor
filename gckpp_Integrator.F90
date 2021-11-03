@@ -421,7 +421,7 @@ SUBROUTINE Rosenbrock(N,Y,Tstart,Tend, &
          IERR)
     
 !~~~>  CALL Normal Rosenbrock method
-    IF ( .not. Autoreduce ) &
+    IF ( .not. Autoreduce .or. IERR .eq. -99 ) &
          CALL ros_Integrator(Y, Tstart, Tend, Texit,   &
          AbsTol, RelTol,                          &
          !  Integration parameters
@@ -730,7 +730,7 @@ Stage: DO istage = 1, ros_S
 #else
    REAL(kind=dp) :: Jac0(LU_NONZERO), Ghimj(LU_NONZERO)
 #endif
-   REAL(kind=dp) :: H, Hnew, Hold, HC, HG, Fac, Tau
+   REAL(kind=dp) :: H, Hnew, HC, HG, Fac, Tau
    REAL(kind=dp) :: Err, Yerr(N), Yerrsub(NVAR)
    INTEGER :: Pivot(N), Direction, ioffset, j, istage
    LOGICAL :: RejectLastH, RejectMoreH, Singular, Reduced
@@ -741,9 +741,6 @@ Stage: DO istage = 1, ros_S
 !    REAL(kind=dp) WLAMCH
 !    EXTERNAL WLAMCH
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   REAL(dp) :: Atmp(LU_NONZERO) = 0._dp
-   REAL(dp) :: Btmp(NVAR) = 0._dp
 
 !~~~>  Initial preparations
    DO_SLV  = .true.
@@ -791,15 +788,10 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
    if (.not. reduced) then
       Prd0 = Prod ! Save the initial Prod vector for 1st order approx
       Los0 = Loss ! Save the initial Loss vector for 1st order approx
-      CALL Reduce( threshold, Prd0, Los0*Y )
+      CALL Reduce( threshold, Prd0, Los0*Y, IERR )
       reduced = .true.
+      if (IERR .eq. -99) return
    endif
-
-!   DO i=1,N
-!      IF (.not. DO_FUN(i)) &
-!           call autoreduce_1stOrder(i,Y(i),Prod(i),Loss(i),0.d0,H)
-!   ENDDO
-
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
       CALL ros_FunTimeDerivative ( T, Roundoff, Y, &
@@ -861,7 +853,7 @@ Stage: DO istage = 1, ros_S
          HG = Direction*H*ros_Gamma(istage)
          CALL WAXPY(rNVAR,HG,dFdT,1,K(ioffset+1),1)
       END IF
-      CALL ros_cSolve(Ghimj(1:cNONZERO), Pivot, K(ioffset+1), Atmp, Btmp, JVS_MAP, SPC_MAP)
+      CALL ros_cSolve(Ghimj(1:cNONZERO), Pivot, K(ioffset+1), JVS_MAP, SPC_MAP)
        
    END DO Stage
 
@@ -918,7 +910,6 @@ Stage: DO istage = 1, ros_S
       RSTATUS(Ntexit) = T
       RejectLastH = .FALSE.
       RejectMoreH = .FALSE.
-      Hold = H
       H = Hnew
       EXIT UntilAccepted ! EXIT THE LOOP: WHILE STEP NOT ACCEPTED
    ELSE           !~~~> Reject step
@@ -933,11 +924,6 @@ Stage: DO istage = 1, ros_S
 
    END DO UntilAccepted
    
-   DO i=1,N
-      IF (.not. DO_FUN(i)) &
-           call autoreduce_1stOrder(i,Y(i),Prod(i),Loss(i),0.d0,Hold)
-   ENDDO
-
    END DO TimeLoop
 
    ! 1st order calculation for removed species per Shen et al. (2020) Eq. 4
@@ -945,10 +931,10 @@ Stage: DO istage = 1, ros_S
    ! -- DO_FUN loops over 1,NVAR. Only needs to loop over NVAR-rNVAR
    !    but the structure doesn't exist. Maybe worth considering 
    !    for efficiency purposes.
-!   DO i=1,N
-!      IF (.not. DO_FUN(i)) &
-!           call autoreduce_1stOrder(i,Y(i),Prd0(i),Los0(i),Tstart,Tend)
-!   ENDDO
+   DO i=1,N
+      IF (.not. DO_FUN(i)) &
+           call autoreduce_1stOrder(i,Y(i),Prd0(i),Los0(i),Tstart,Tend)
+   ENDDO
 
 !~~~> Succesful exit
    IERR = 1  !~~~> The integration was successful
@@ -1135,7 +1121,7 @@ Stage: DO istage = 1, ros_S
  
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE ros_cSolve( A, Pivot, b, Atmp, Btmp, map1, map2 )
+  SUBROUTINE ros_cSolve( A, Pivot, b, map1, map2 )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !  Template for the forward/backward substitution (using pre-computed LU decomposition)
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1160,8 +1146,10 @@ Stage: DO istage = 1, ros_S
    END IF  
 #else   
 
+   Atmp = 0.d0
+   Btmp = 0.d0
    Atmp(map1(1:cNONZERO)) = A
-   btmp(map2(1:rNVAR)) = b
+   btmp(map2(1:rNVAR))    = b
 !   call cWCOPY(cNONZERO,LU_NONZERO,A,1,Atmp,1,map1)
 !   call cWCOPY(rNVAR,NVAR,B,1,Btmp,1,map2)
    CALL KppSolve( Atmp, btmp )
@@ -1753,10 +1741,10 @@ SUBROUTINE FunSplitTemplate( T, Y, Ydot, P_VAR, D_VAR )
 !~~~> Local variables
    REAL(kind=dp) :: Told, P(NVAR), D(NVAR)
 
+   P    = 0.d0
+   D    = 0.d0
    Told = TIME
    TIME = T
-   P = 0.d0
-   D = 0.d0
    CALL Fun_SPLIT( Y, FIX, RCONST, P, D )
    Ydot = P - D*y
    TIME = Told
@@ -1926,21 +1914,28 @@ END SUBROUTINE cWAXPY
 
       END SUBROUTINE cWCOPY
 
-      SUBROUTINE REDUCE(threshold,P,L)
+      SUBROUTINE REDUCE(threshold,P,L,IERR)
         
         USE gckpp_JacobianSP
 
         REAL(dp), INTENT(IN) :: P(NVAR), L(NVAR), threshold
         INTEGER              :: iSPC_MAP(NVAR)
         INTEGER              :: i, ii, iii, idx, nrmv, s
+        INTEGER              :: IERR
 
         iSPC_MAP = 0
         
         NRMV = 0
         S    = 1
+
+        if (maxval(P) .lt. threshold .and. maxval(L) .lt. threshold) then
+           IERR = -99
+           return
+        endif
+
         do i=1,NVAR
            if (abs(L(i)).lt.threshold .and. abs(P(i)).lt.threshold) then
-!           if (abs(P(i)-L(i)).le.threshold) then
+!           if (abs(dcdt(i)).le.threshold) then
               NRMV=NRMV+1
               DO_SLV(i) = .false.
               DO_FUN(i) = .false.
@@ -1951,6 +1946,11 @@ END SUBROUTINE cWAXPY
            S=S+1
         ENDDO
         rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
+        if (real(rNVAR)/real(NVAR) .lt. 0.1) then
+           IERR = -99
+!           write(*,*) 'Reverting... -99'
+           return
+        endif
         
         II  = 1
         III = 1

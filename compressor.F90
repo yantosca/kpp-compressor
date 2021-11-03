@@ -51,7 +51,7 @@ program main
   NITR = 1
   NAVG = 50
 
-  lim = 5e2
+  lim = 1e2
 
   R     = 0._dp
   Cinit = 0._dp
