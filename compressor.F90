@@ -43,7 +43,7 @@ program main
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv
 
-  OUTPUT     = .false.
+  OUTPUT     = .TRUE.
   FORCE_FULL = .false.
   REINIT     = .true.  ! Reset C every NITR,NAVG iteration
 !  REINIT     = .false. ! Let C evolve over the NITR, NAVG loop
@@ -306,14 +306,14 @@ CONTAINS
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'Compacted sparse data: '
-  write(*,'(a,'//clunz//'i4)') ' cLU_IROW: ', cLU_IROW
-  write(*,'(a,'//clunz//'i4)') ' cLU_ICOL: ', cLU_ICOL
-  write(*,'(a,'//cnv//'i4)') ' cLU_CROW: ', cLU_CROW
-  write(*,'(a,'//cnv//'i4)') ' cLU_DIAG: ', cLU_DIAG
+  write(*,'(a,'//clunz//'i4)') ' cLU_IROW: ', cLU_IROW(1:cNONZERO)
+  write(*,'(a,'//clunz//'i4)') ' cLU_ICOL: ', cLU_ICOL(1:cNONZERO)
+  write(*,'(a,'//cnv//'i4)') ' cLU_CROW: ', cLU_CROW(1:rNVAR+1)
+  write(*,'(a,'//cnv//'i4)') ' cLU_DIAG: ', cLU_DIAG(1:rNVAR+1)
   write(*,*) '---------------'
   write(*,*) ' '
   write(*,*) 'JVS_MAP ensures that the right JVS values are indexed in the integration'
-  write(*,'(a,'//clunz//'i4)') ' JVS_MAP:  ', JVS_MAP
+  write(*,'(a,'//clunz//'i4)') ' JVS_MAP:  ', JVS_MAP(1:cNONZERO)
   write(*,*) ' '
   write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
   write(*,*) '-- ', rNVAR, SPC_MAP(rNVAR)
