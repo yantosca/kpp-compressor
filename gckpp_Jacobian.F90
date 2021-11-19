@@ -56,206 +56,51 @@ SUBROUTINE Jac_SP ( V, F, RCT, JVS )
 
 ! Local variables
 ! B - Temporary array
-  REAL(kind=dp) :: B(20)
+  REAL(kind=dp) :: B(4)
 
-! B(1) = dA(1)/dV(9)
-  B(1) = RCT(1)
-! B(2) = dA(2)/dV(9)
-  B(2) = RCT(2)*V(10)
-! B(3) = dA(2)/dV(10)
-  B(3) = RCT(2)*V(9)
-! B(4) = dA(3)/dV(6)
-  B(4) = RCT(3)*V(8)
-! B(5) = dA(3)/dV(8)
-  B(5) = RCT(3)*V(6)
-! B(6) = dA(4)/dV(10)
-  B(6) = RCT(4)*V(11)
-! B(7) = dA(4)/dV(11)
-  B(7) = RCT(4)*V(10)
-! B(8) = dA(5)/dV(12)
-  B(8) = RCT(5)
-! B(9) = dA(6)/dV(11)
-  B(9) = RCT(6)*2*V(11)
-! B(10) = dA(7)/dV(7)
-  B(10) = RCT(7)
-! B(11) = dA(8)/dV(5)
-  B(11) = RCT(8)*V(8)
-! B(12) = dA(8)/dV(8)
-  B(12) = RCT(8)*V(5)
-! B(13) = dA(9)/dV(7)
-  B(13) = RCT(9)*V(8)
-! B(14) = dA(9)/dV(8)
-  B(14) = RCT(9)*V(7)
-! B(15) = dA(10)/dV(9)
-  B(15) = RCT(10)*V(11)
-! B(16) = dA(10)/dV(11)
-  B(16) = RCT(10)*V(9)
-! B(17) = dA(11)/dV(8)
-  B(17) = RCT(11)*V(11)
-! B(18) = dA(11)/dV(11)
-  B(18) = RCT(11)*V(8)
-! B(19) = dA(12)/dV(8)
-  B(19) = RCT(12)*V(12)
-! B(20) = dA(12)/dV(12)
-  B(20) = RCT(12)*V(8)
+! B(1) = dA(1)/dV(2)
+  B(1) = RCT(1)*V(4)
+! B(2) = dA(1)/dV(4)
+  B(2) = RCT(1)*V(2)
+! B(3) = dA(2)/dV(3)
+  B(3) = RCT(2)*V(4)
+! B(4) = dA(2)/dV(4)
+  B(4) = RCT(2)*V(3)
 
 ! Construct the Jacobian terms from B's
 IF (DO_JVS(1)) &
 ! JVS(1) = Jac_FULL(1,1)
   JVS(1) = 0
 IF (DO_JVS(2)) &
-! JVS(2) = Jac_FULL(1,6)
-  JVS(2) = B(4)
+! JVS(2) = Jac_FULL(1,2)
+  JVS(2) = B(1)
 IF (DO_JVS(3)) &
-! JVS(3) = Jac_FULL(1,8)
-  JVS(3) = B(5)
+! JVS(3) = Jac_FULL(1,4)
+  JVS(3) = B(2)
 IF (DO_JVS(4)) &
 ! JVS(4) = Jac_FULL(2,2)
-  JVS(4) = 0
+  JVS(4) = -B(1)
 IF (DO_JVS(5)) &
-! JVS(5) = Jac_FULL(2,8)
-  JVS(5) = B(19)
+! JVS(5) = Jac_FULL(2,3)
+  JVS(5) = B(3)
 IF (DO_JVS(6)) &
-! JVS(6) = Jac_FULL(2,12)
-  JVS(6) = B(20)
+! JVS(6) = Jac_FULL(2,4)
+  JVS(6) = -B(2)+B(4)
 IF (DO_JVS(7)) &
 ! JVS(7) = Jac_FULL(3,3)
-  JVS(7) = 0
+  JVS(7) = -B(3)
 IF (DO_JVS(8)) &
-! JVS(8) = Jac_FULL(3,7)
-  JVS(8) = B(13)
+! JVS(8) = Jac_FULL(3,4)
+  JVS(8) = -B(4)
 IF (DO_JVS(9)) &
-! JVS(9) = Jac_FULL(3,8)
-  JVS(9) = B(14)+B(17)
+! JVS(9) = Jac_FULL(4,2)
+  JVS(9) = -B(1)
 IF (DO_JVS(10)) &
-! JVS(10) = Jac_FULL(3,11)
-  JVS(10) = B(18)
+! JVS(10) = Jac_FULL(4,3)
+  JVS(10) = -B(3)
 IF (DO_JVS(11)) &
 ! JVS(11) = Jac_FULL(4,4)
-  JVS(11) = 0
-IF (DO_JVS(12)) &
-! JVS(12) = Jac_FULL(4,8)
-  JVS(12) = B(17)
-IF (DO_JVS(13)) &
-! JVS(13) = Jac_FULL(4,9)
-  JVS(13) = B(1)+B(2)+2*B(15)
-IF (DO_JVS(14)) &
-! JVS(14) = Jac_FULL(4,10)
-  JVS(14) = B(3)
-IF (DO_JVS(15)) &
-! JVS(15) = Jac_FULL(4,11)
-  JVS(15) = B(9)+2*B(16)+B(18)
-IF (DO_JVS(16)) &
-! JVS(16) = Jac_FULL(5,5)
-  JVS(16) = -B(11)
-IF (DO_JVS(17)) &
-! JVS(17) = Jac_FULL(5,8)
-  JVS(17) = -B(12)
-IF (DO_JVS(18)) &
-! JVS(18) = Jac_FULL(6,5)
-  JVS(18) = B(11)
-IF (DO_JVS(19)) &
-! JVS(19) = Jac_FULL(6,6)
-  JVS(19) = -B(4)
-IF (DO_JVS(20)) &
-! JVS(20) = Jac_FULL(6,8)
-  JVS(20) = -B(5)+B(12)
-IF (DO_JVS(21)) &
-! JVS(21) = Jac_FULL(7,7)
-  JVS(21) = -B(10)-B(13)
-IF (DO_JVS(22)) &
-! JVS(22) = Jac_FULL(7,8)
-  JVS(22) = -B(14)
-IF (DO_JVS(23)) &
-! JVS(23) = Jac_FULL(7,11)
-  JVS(23) = B(9)
-IF (DO_JVS(24)) &
-! JVS(24) = Jac_FULL(8,5)
-  JVS(24) = -B(11)
-IF (DO_JVS(25)) &
-! JVS(25) = Jac_FULL(8,6)
-  JVS(25) = -B(4)
-IF (DO_JVS(26)) &
-! JVS(26) = Jac_FULL(8,7)
-  JVS(26) = 2*B(10)-B(13)
-IF (DO_JVS(27)) &
-! JVS(27) = Jac_FULL(8,8)
-  JVS(27) = -B(5)-B(12)-B(14)-B(17)-B(19)
-IF (DO_JVS(28)) &
-! JVS(28) = Jac_FULL(8,9)
-  JVS(28) = 2*B(1)+B(15)
-IF (DO_JVS(29)) &
-! JVS(29) = Jac_FULL(8,10)
-  JVS(29) = B(6)
-IF (DO_JVS(30)) &
-! JVS(30) = Jac_FULL(8,11)
-  JVS(30) = B(7)+B(16)-B(18)
-IF (DO_JVS(31)) &
-! JVS(31) = Jac_FULL(8,12)
-  JVS(31) = -B(20)
-IF (DO_JVS(32)) &
-! JVS(32) = Jac_FULL(9,9)
-  JVS(32) = -B(1)-B(2)-B(15)
-IF (DO_JVS(33)) &
-! JVS(33) = Jac_FULL(9,10)
-  JVS(33) = -B(3)
-IF (DO_JVS(34)) &
-! JVS(34) = Jac_FULL(9,11)
-  JVS(34) = -B(16)
-IF (DO_JVS(35)) &
-! JVS(35) = Jac_FULL(9,12)
-  JVS(35) = B(8)
-IF (DO_JVS(36)) &
-! JVS(36) = Jac_FULL(10,9)
-  JVS(36) = -B(2)
-IF (DO_JVS(37)) &
-! JVS(37) = Jac_FULL(10,10)
-  JVS(37) = -B(3)-B(6)
-IF (DO_JVS(38)) &
-! JVS(38) = Jac_FULL(10,11)
-  JVS(38) = -B(7)
-IF (DO_JVS(39)) &
-! JVS(39) = Jac_FULL(10,12)
-  JVS(39) = B(8)
-IF (DO_JVS(40)) &
-! JVS(40) = Jac_FULL(11,5)
-  JVS(40) = B(11)
-IF (DO_JVS(41)) &
-! JVS(41) = Jac_FULL(11,6)
-  JVS(41) = B(4)
-IF (DO_JVS(42)) &
-! JVS(42) = Jac_FULL(11,7)
-  JVS(42) = B(13)
-IF (DO_JVS(43)) &
-! JVS(43) = Jac_FULL(11,8)
-  JVS(43) = B(5)+B(12)+B(14)-B(17)
-IF (DO_JVS(44)) &
-! JVS(44) = Jac_FULL(11,9)
-  JVS(44) = -B(15)
-IF (DO_JVS(45)) &
-! JVS(45) = Jac_FULL(11,10)
-  JVS(45) = -B(6)
-IF (DO_JVS(46)) &
-! JVS(46) = Jac_FULL(11,11)
-  JVS(46) = -B(7)-2*B(9)-B(16)-B(18)
-IF (DO_JVS(47)) &
-! JVS(47) = Jac_FULL(11,12)
-  JVS(47) = 0
-IF (DO_JVS(48)) &
-! JVS(48) = Jac_FULL(12,8)
-  JVS(48) = -B(19)
-IF (DO_JVS(49)) &
-! JVS(49) = Jac_FULL(12,9)
-  JVS(49) = B(2)
-IF (DO_JVS(50)) &
-! JVS(50) = Jac_FULL(12,10)
-  JVS(50) = B(3)+B(6)
-IF (DO_JVS(51)) &
-! JVS(51) = Jac_FULL(12,11)
-  JVS(51) = B(7)
-IF (DO_JVS(52)) &
-! JVS(52) = Jac_FULL(12,12)
-  JVS(52) = -B(8)-B(20)
+  JVS(11) = -B(2)-B(4)
       
 END SUBROUTINE Jac_SP
 
@@ -282,19 +127,10 @@ SUBROUTINE Jac_SP_Vec ( JVS, UV, JUV )
 ! JUV - Jacobian times user vector
   REAL(kind=dp) :: JUV(NVAR)
 
-  JUV(1) = JVS(1)*UV(1)+JVS(2)*UV(6)+JVS(3)*UV(8)
-  JUV(2) = JVS(4)*UV(2)+JVS(5)*UV(8)+JVS(6)*UV(12)
-  JUV(3) = JVS(7)*UV(3)+JVS(8)*UV(7)+JVS(9)*UV(8)+JVS(10)*UV(11)
-  JUV(4) = JVS(11)*UV(4)+JVS(12)*UV(8)+JVS(13)*UV(9)+JVS(14)*UV(10)+JVS(15)*UV(11)
-  JUV(5) = JVS(16)*UV(5)+JVS(17)*UV(8)
-  JUV(6) = JVS(18)*UV(5)+JVS(19)*UV(6)+JVS(20)*UV(8)
-  JUV(7) = JVS(21)*UV(7)+JVS(22)*UV(8)+JVS(23)*UV(11)
-  JUV(8) = JVS(24)*UV(5)+JVS(25)*UV(6)+JVS(26)*UV(7)+JVS(27)*UV(8)+JVS(28)*UV(9)+JVS(29)*UV(10)+JVS(30)*UV(11)+JVS(31)&
-             &*UV(12)
-  JUV(9) = JVS(32)*UV(9)+JVS(33)*UV(10)+JVS(34)*UV(11)+JVS(35)*UV(12)
-  JUV(10) = JVS(36)*UV(9)+JVS(37)*UV(10)+JVS(38)*UV(11)+JVS(39)*UV(12)
-  JUV(11) = JVS(40)*UV(5)+JVS(41)*UV(6)+JVS(42)*UV(7)+JVS(43)*UV(8)+JVS(44)*UV(9)+JVS(45)*UV(10)+JVS(46)*UV(11)
-  JUV(12) = JVS(48)*UV(8)+JVS(49)*UV(9)+JVS(50)*UV(10)+JVS(51)*UV(11)+JVS(52)*UV(12)
+  JUV(1) = JVS(1)*UV(1)+JVS(2)*UV(2)+JVS(3)*UV(4)
+  JUV(2) = JVS(4)*UV(2)+JVS(5)*UV(3)+JVS(6)*UV(4)
+  JUV(3) = JVS(7)*UV(3)+JVS(8)*UV(4)
+  JUV(4) = JVS(9)*UV(2)+JVS(10)*UV(3)+JVS(11)*UV(4)
       
 END SUBROUTINE Jac_SP_Vec
 
@@ -322,19 +158,9 @@ SUBROUTINE JacTR_SP_Vec ( JVS, UV, JTUV )
   REAL(kind=dp) :: JTUV(NVAR)
 
   JTUV(1) = JVS(1)*UV(1)
-  JTUV(2) = JVS(4)*UV(2)
-  JTUV(3) = JVS(7)*UV(3)
-  JTUV(4) = JVS(11)*UV(4)
-  JTUV(5) = JVS(16)*UV(5)+JVS(18)*UV(6)+JVS(24)*UV(8)+JVS(40)*UV(11)
-  JTUV(6) = JVS(2)*UV(1)+JVS(19)*UV(6)+JVS(25)*UV(8)+JVS(41)*UV(11)
-  JTUV(7) = JVS(8)*UV(3)+JVS(21)*UV(7)+JVS(26)*UV(8)+JVS(42)*UV(11)
-  JTUV(8) = JVS(3)*UV(1)+JVS(5)*UV(2)+JVS(9)*UV(3)+JVS(12)*UV(4)+JVS(17)*UV(5)+JVS(20)*UV(6)+JVS(22)*UV(7)+JVS(27)*UV(8)&
-              &+JVS(43)*UV(11)+JVS(48)*UV(12)
-  JTUV(9) = JVS(13)*UV(4)+JVS(28)*UV(8)+JVS(32)*UV(9)+JVS(36)*UV(10)+JVS(44)*UV(11)+JVS(49)*UV(12)
-  JTUV(10) = JVS(14)*UV(4)+JVS(29)*UV(8)+JVS(33)*UV(9)+JVS(37)*UV(10)+JVS(45)*UV(11)+JVS(50)*UV(12)
-  JTUV(11) = JVS(10)*UV(3)+JVS(15)*UV(4)+JVS(23)*UV(7)+JVS(30)*UV(8)+JVS(34)*UV(9)+JVS(38)*UV(10)+JVS(46)*UV(11)+JVS(51)&
-               &*UV(12)
-  JTUV(12) = JVS(6)*UV(2)+JVS(31)*UV(8)+JVS(35)*UV(9)+JVS(39)*UV(10)+JVS(52)*UV(12)
+  JTUV(2) = JVS(2)*UV(1)+JVS(4)*UV(2)+JVS(9)*UV(4)
+  JTUV(3) = JVS(5)*UV(2)+JVS(7)*UV(3)+JVS(10)*UV(4)
+  JTUV(4) = JVS(3)*UV(1)+JVS(6)*UV(2)+JVS(8)*UV(3)+JVS(11)*UV(4)
       
 END SUBROUTINE JacTR_SP_Vec
 

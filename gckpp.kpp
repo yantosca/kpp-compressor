@@ -5,7 +5,7 @@
 #MEX off
 #STOICMAT off
 
-#INCLUDE problem2.eqn
+#INCLUDE problem2_small.eqn
 
 #INLINE F90_GLOBAL
       REAL(kind=dp) :: R(NREACT)

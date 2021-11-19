@@ -1,0 +1,20 @@
+#include atoms
+
+#DEFVAR
+
+O3     = IGNORE;
+NO     = IGNORE;
+OH     = IGNORE;
+NO2    = IGNORE;
+CO     = IGNORE;
+CO2    = IGNORE;
+HO2    = IGNORE;
+H2O2   = IGNORE;
+CH4    = IGNORE;
+HNO3   = IGNORE;
+H2O    = IGNORE;
+O2     = IGNORE;
+
+#EQUATIONS
+CO   + OH  = CO2 	: 2.4d-13;
+CH4  + OH  = CO 	: 3.8d-15;

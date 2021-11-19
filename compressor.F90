@@ -41,7 +41,7 @@ program main
   LOGICAL              :: ReInit
   
   ! Formatting vars
-  character(len=20) :: lunz, nv, clunz, cnv
+  character(len=20) :: lunz, nv, clunz, cnv, rnv
 
   OUTPUT     = .TRUE.
   FORCE_FULL = .false.
@@ -51,7 +51,7 @@ program main
   NITR = 1
   NAVG = 50
 
-  lim = 5e6
+  lim = 2.39e7
 
   R     = 0._dp
   Cinit = 0._dp
@@ -60,11 +60,11 @@ program main
 !  call set_quantssfc(dcdt,Cinit,R)
 !  call set_quants_uppertrop(dcdt,Cinit,R)
   Cinit(1:NVAR)   = 1.e8_dp
-  Cinit(ind_O2)   = 5.3e18_dp
+!  Cinit(ind_O2)   = 5.3e18_dp
   Cinit(ind_CH4)  = 4.2e13_dp
   Cinit(ind_CO)   = 1.0e12_dp
-  Cinit(ind_NO)   = 1.25e9_dp
-  Cinit(ind_NO2)  = 1.25e9_dp
+  !Cinit(ind_NO)   = 1.25e9_dp
+  !Cinit(ind_NO2)  = 1.25e9_dp
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
@@ -281,6 +281,7 @@ CONTAINS
   ! Initialize formatting values
   write(lunz,*) LU_NONZERO
   write(nv,*) NVAR+1
+  write(rnv,*) rNVAR
   write(clunz,*) cNONZERO
   write(cnv,*) rNVAR+1
 
@@ -317,7 +318,8 @@ CONTAINS
   write(*,*) ' '
   write(*,*) 'SPC_MAP ensures that the right species values are indexed in the integration'
   write(*,*) '-- ', rNVAR, SPC_MAP(rNVAR)
-  write(*,'(a,'//nv//'i4)') ' SPC_MAP:  ', SPC_MAP
+  write(*,'(a,'//rnv//'i4)') ' SPC_MAP:  ', SPC_MAP(1:rNVAR)
+  write(*,'('//rnv//'a)') (SPC_NAMES(SPC_MAP(1:rNVAR)))
   write(*,*) ' '
   write(*,*) 'DO_SLV controls the terms that will be computed in KppSolve(): 1=compute, 0=skip'
   write(*,'(a,'//nv//'l4)') ' DO_SLV:   ', DO_SLV
