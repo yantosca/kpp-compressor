@@ -724,7 +724,7 @@ Stage: DO istage = 1, ros_S
 !~~~> Output: Error indicator
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables
-   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N), Prod(N), Prd0(N), Loss(N), Los0(N)
+   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N), Prod(N), Prd0(N), Loss(N), Los0(N), dummy(N)
    REAL(kind=dp) :: K(NVAR*ros_S), dFdT(N)
 #ifdef FULL_ALGEBRA    
    REAL(kind=dp) :: Jac0(N,N), Ghimj(N,N)
@@ -735,6 +735,7 @@ Stage: DO istage = 1, ros_S
    REAL(kind=dp) :: Err, Yerr(N), Yerrsub(NVAR)
    INTEGER :: Pivot(N), Direction, ioffset, j, istage
    LOGICAL :: RejectLastH, RejectMoreH, Singular, Reduced
+   REAL(kind=dp) :: localthreshold
 !~~~>  Local parameters
    REAL(kind=dp), PARAMETER :: ZERO = 0.0_dp, ONE  = 1.0_dp
    REAL(kind=dp), PARAMETER :: DeltaMin = 1.0E-5_dp
@@ -748,6 +749,7 @@ Stage: DO istage = 1, ros_S
    DO_FUN  = .true.
    DO_JVS  = .true.
    Reduced = .false.
+   localthreshold=threshold
 
    T = Tstart
    RSTATUS(Nhexit) = ZERO
@@ -766,6 +768,7 @@ Stage: DO istage = 1, ros_S
 
 !~~~> Time loop begins below
 
+acceptReduction: DO
 TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
        .OR. (Direction < 0).AND.((Tend-T)+Roundoff <= ZERO) )
 
@@ -932,6 +935,23 @@ Stage: DO istage = 1, ros_S
    END DO UntilAccepted
    
    END DO TimeLoop
+
+! --- Test the rates. 
+!     Do this before testing error and adjusting step size
+   IF (.not.any(abs(Fcn-Fcn0).gt.localthreshold)) THEN
+      exit acceptReduction
+   ELSE
+      ! Redo the reduction
+      DO_SLV  = .true.
+      DO_FUN  = .true.
+      DO_JVS  = .true.
+      Reduced = .false.
+      localthreshold = localthreshold*10.e0
+      CALL FunSplitTemplate(T,Y,dummy,Prod,Loss)
+      write(*,*) '<<>> REJECT!! new threshold set to ', localthreshold
+   END IF
+
+   END DO acceptReduction
 
    ! 1st order calculation for removed species per Shen et al. (2020) Eq. 4
    ! -- currently, DO_FUN() selects

@@ -28,27 +28,27 @@ MODULE gckpp_Parameters
 
 
 ! NSPEC - Number of chemical species
-  INTEGER, PARAMETER :: NSPEC = 4 
+  INTEGER, PARAMETER :: NSPEC = 12 
 ! NVAR - Number of Variable species
-  INTEGER, PARAMETER :: NVAR = 4 
+  INTEGER, PARAMETER :: NVAR = 12 
 ! NFAM - Number of Prod/Loss Families
   INTEGER, PARAMETER :: NFAM = 1 
 ! NVARACT - Number of Active species
-  INTEGER, PARAMETER :: NVARACT = 3 
+  INTEGER, PARAMETER :: NVARACT = 8 
 ! NFIX - Number of Fixed species
   INTEGER, PARAMETER :: NFIX = 1 
 ! NREACT - Number of reactions
-  INTEGER, PARAMETER :: NREACT = 2 
+  INTEGER, PARAMETER :: NREACT = 12 
 ! NVARST - Starting of variables in conc. vect.
   INTEGER, PARAMETER :: NVARST = 1 
 ! NFIXST - Starting of fixed in conc. vect.
-  INTEGER, PARAMETER :: NFIXST = 5 
+  INTEGER, PARAMETER :: NFIXST = 13 
 ! NONZERO - Number of nonzero entries in Jacobian
-  INTEGER, PARAMETER :: NONZERO = 11 
+  INTEGER, PARAMETER :: NONZERO = 51 
 ! LU_NONZERO - Number of nonzero entries in LU factoriz. of Jacobian
-  INTEGER, PARAMETER :: LU_NONZERO = 11 
+  INTEGER, PARAMETER :: LU_NONZERO = 52 
 ! CNVAR - (NVAR+1) Number of elements in compressed row format
-  INTEGER, PARAMETER :: CNVAR = 5 
+  INTEGER, PARAMETER :: CNVAR = 13 
 ! NLOOKAT - Number of species to look at
   INTEGER, PARAMETER :: NLOOKAT = 0 
 ! NMONITOR - Number of species to monitor
@@ -60,9 +60,17 @@ MODULE gckpp_Parameters
 !   VAR(ind_spc) = C(ind_spc)
 
   INTEGER, PARAMETER :: ind_CO2 = 1 
-  INTEGER, PARAMETER :: ind_CO = 2 
-  INTEGER, PARAMETER :: ind_CH4 = 3 
-  INTEGER, PARAMETER :: ind_OH = 4 
+  INTEGER, PARAMETER :: ind_HNO3 = 2 
+  INTEGER, PARAMETER :: ind_H2O = 3 
+  INTEGER, PARAMETER :: ind_O2 = 4 
+  INTEGER, PARAMETER :: ind_CH4 = 5 
+  INTEGER, PARAMETER :: ind_CO = 6 
+  INTEGER, PARAMETER :: ind_H2O2 = 7 
+  INTEGER, PARAMETER :: ind_OH = 8 
+  INTEGER, PARAMETER :: ind_O3 = 9 
+  INTEGER, PARAMETER :: ind_NO = 10 
+  INTEGER, PARAMETER :: ind_HO2 = 11 
+  INTEGER, PARAMETER :: ind_NO2 = 12 
 
 ! Index declaration for fixed species in C
 !   C(ind_spc)

@@ -60,28 +60,70 @@ SUBROUTINE Fun_SPLIT ( V, F, RCT, P_VAR, D_VAR )
 
 
 ! Computation of equation rates
-  A(1) = RCT(1)*V(2)*V(4)
-  A(2) = RCT(2)*V(3)*V(4)
+  A(1) = RCT(1)*V(9)
+  A(2) = RCT(2)*V(9)*V(10)
+  A(3) = RCT(3)*V(6)*V(8)
+  A(4) = RCT(4)*V(10)*V(11)
+  A(5) = RCT(5)*V(12)
+  A(6) = RCT(6)*V(11)*V(11)
+  A(7) = RCT(7)*V(7)
+  A(8) = RCT(8)*V(5)*V(8)
+  A(9) = RCT(9)*V(7)*V(8)
+  A(10) = RCT(10)*V(9)*V(11)
+  A(11) = RCT(11)*V(8)*V(11)
+  A(12) = RCT(12)*V(8)*V(12)
 
 ! Production function
 IF (DO_FUN(1)) &
-  P_VAR(1) = A(1)
+  P_VAR(1) = A(3)
 IF (DO_FUN(2)) &
-  P_VAR(2) = A(2)
+  P_VAR(2) = A(12)
 IF (DO_FUN(3)) &
-  P_VAR(3) = 0
+  P_VAR(3) = A(9)+A(11)
 IF (DO_FUN(4)) &
-  P_VAR(4) = 0
+  P_VAR(4) = A(1)+A(2)+A(6)+2*A(10)+A(11)
+IF (DO_FUN(5)) &
+  P_VAR(5) = 0
+IF (DO_FUN(6)) &
+  P_VAR(6) = A(8)
+IF (DO_FUN(7)) &
+  P_VAR(7) = A(6)
+IF (DO_FUN(8)) &
+  P_VAR(8) = 2*A(1)+A(4)+2*A(7)+A(10)
+IF (DO_FUN(9)) &
+  P_VAR(9) = A(5)
+IF (DO_FUN(10)) &
+  P_VAR(10) = A(5)
+IF (DO_FUN(11)) &
+  P_VAR(11) = A(3)+A(8)+A(9)
+IF (DO_FUN(12)) &
+  P_VAR(12) = A(2)+A(4)
 
 ! Destruction function
 IF (DO_FUN(1)) &
   D_VAR(1) = 0
 IF (DO_FUN(2)) &
-  D_VAR(2) = RCT(1)*V(4)
+  D_VAR(2) = 0
 IF (DO_FUN(3)) &
-  D_VAR(3) = RCT(2)*V(4)
+  D_VAR(3) = 0
 IF (DO_FUN(4)) &
-  D_VAR(4) = RCT(1)*V(2)+RCT(2)*V(3)
+  D_VAR(4) = 0
+IF (DO_FUN(5)) &
+  D_VAR(5) = RCT(8)*V(8)
+IF (DO_FUN(6)) &
+  D_VAR(6) = RCT(3)*V(8)
+IF (DO_FUN(7)) &
+  D_VAR(7) = RCT(7)+RCT(9)*V(8)
+IF (DO_FUN(8)) &
+  D_VAR(8) = RCT(3)*V(6)+RCT(8)*V(5)+RCT(9)*V(7)+RCT(11)*V(11)+RCT(12)*V(12)
+IF (DO_FUN(9)) &
+  D_VAR(9) = RCT(1)+RCT(2)*V(10)+RCT(10)*V(11)
+IF (DO_FUN(10)) &
+  D_VAR(10) = RCT(2)*V(9)+RCT(4)*V(11)
+IF (DO_FUN(11)) &
+  D_VAR(11) = RCT(4)*V(10)+RCT(6)*2*V(11)+RCT(10)*V(9)+RCT(11)*V(8)
+IF (DO_FUN(12)) &
+  D_VAR(12) = RCT(5)+RCT(12)*V(8)
       
 END SUBROUTINE Fun_SPLIT
 

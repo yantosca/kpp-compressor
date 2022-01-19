@@ -43,15 +43,15 @@ program main
   ! Formatting vars
   character(len=20) :: lunz, nv, clunz, cnv, rnv
 
-  OUTPUT     = .TRUE.
+  OUTPUT     = .false.
   FORCE_FULL = .false.
-  REINIT     = .true.  ! Reset C every NITR,NAVG iteration
-!  REINIT     = .false. ! Let C evolve over the NITR, NAVG loop
+!  REINIT     = .true.  ! Reset C every NITR,NAVG iteration
+  REINIT     = .false. ! Let C evolve over the NITR, NAVG loop
 
   NITR = 1
-  NAVG = 50
+  NAVG = 1
 
-  lim = 2.39e7
+  lim = 1e0
 
   R     = 0._dp
   Cinit = 0._dp
@@ -63,6 +63,7 @@ program main
 !  Cinit(ind_O2)   = 5.3e18_dp
   Cinit(ind_CH4)  = 4.2e13_dp
   Cinit(ind_CO)   = 1.0e12_dp
+  Cinit(ind_NO2)  = 0.e0_dp
   !Cinit(ind_NO)   = 1.25e9_dp
   !Cinit(ind_NO2)  = 1.25e9_dp
   ! -------------------------------------------------------------------------- !
@@ -112,7 +113,7 @@ program main
 
   ! -------------------------------------------------------------------------- !
 
-  call showoutput()
+  if (output) call showoutput()
 
   ! 5. Report timing comparison
 
@@ -120,15 +121,15 @@ program main
   write(*,'(a,f5.1,a)') '  problem size: ', 100.*(rNVAR**2)/(NVAR**2), "%"
   write(*,'(a,f5.1,a)') '  non-zero elm: ', 100.*(cNONZERO)/(LU_NONZERO), "%"
 
+  RRMS = sqrt(sum(((Credux(SPC_MAP(1:rNVAR))-Cfull(SPC_MAP(1:rNVAR)))/Cfull(SPC_MAP(1:rNVAR)))**2,&
+       MASK=Cfull(SPC_MAP(1:rNVAR)).ne.0..and.Cfull(SPC_MAP(1:rNVAR)).gt.1e6_dp)/dble(rNVAR))
+
   IF (OUTPUT) THEN
   DO i=1,rNVAR
      ii = SPC_MAP(i)
      write(*,*) SPC_NAMES(ii) // ': ', Cfull(ii), Credux(ii), (Credux(ii)-Cfull(ii))/Cfull(ii)
   ENDDO
   ENDIF
-
-  RRMS = sqrt(sum(((Credux(SPC_MAP(1:rNVAR))-Cfull(SPC_MAP(1:rNVAR)))/Cfull(SPC_MAP(1:rNVAR)))**2,&
-       MASK=Cfull(SPC_MAP(1:rNVAR)).ne.0..and.Cfull(SPC_MAP(1:rNVAR)).gt.1e6_dp)/dble(rNVAR))
 
   write(*,'(a,f8.1)') 'RRMS: ', 100.*RRMS
   do i=1,NVAR

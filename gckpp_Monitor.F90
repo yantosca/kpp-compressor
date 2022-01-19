@@ -23,16 +23,28 @@
 MODULE gckpp_Monitor
 
 
-  CHARACTER(LEN=15), PARAMETER, DIMENSION(4) :: SPC_NAMES = (/ &
-     'CO2            ','CO             ','CH4            ', & ! index 1 - 3
-     'OH             ' /)
+  CHARACTER(LEN=15), PARAMETER, DIMENSION(12) :: SPC_NAMES = (/ &
+     'CO2            ','HNO3           ','H2O            ', & ! index 1 - 3
+     'O2             ','CH4            ','CO             ', & ! index 4 - 6
+     'H2O2           ','OH             ','O3             ', & ! index 7 - 9
+     'NO             ','HO2            ','NO2            ' /)
 
   INTEGER, DIMENSION(1) :: LOOKAT
   INTEGER, DIMENSION(1) :: MONITOR
   CHARACTER(LEN=15), DIMENSION(1) :: SMASS
-  CHARACTER(LEN=100), PARAMETER, DIMENSION(2) :: EQN_NAMES = (/ &
-     ' CO + OH --> CO2                                                                                    ', & ! index 1
-     'CH4 + OH --> CO                                                                                     ' /)
+  CHARACTER(LEN=100), PARAMETER, DIMENSION(12) :: EQN_NAMES = (/ &
+     '       O3 --> O2 + 2 OH                                                                             ', & ! index 1
+     '  O3 + NO --> O2 + NO2                                                                              ', & ! index 2
+     '  CO + OH --> CO2 + HO2                                                                             ', & ! index 3
+     ' NO + HO2 --> OH + NO2                                                                              ', & ! index 4
+     '      NO2 --> O3 + NO                                                                               ', & ! index 5
+     '    2 HO2 --> O2 + H2O2                                                                             ', & ! index 6
+     '     H2O2 --> 2 OH                                                                                  ', & ! index 7
+     ' CH4 + OH --> CO + HO2                                                                              ', & ! index 8
+     'H2O2 + OH --> H2O + HO2                                                                             ', & ! index 9
+     ' O3 + HO2 --> 2 O2 + OH                                                                             ', & ! index 10
+     ' OH + HO2 --> H2O + O2                                                                              ', & ! index 11
+     ' OH + NO2 --> HNO3                                                                                  ' /)
 
   CHARACTER(LEN=15), DIMENSION(1) :: FAM_NAMES
 ! INLINED global variables
