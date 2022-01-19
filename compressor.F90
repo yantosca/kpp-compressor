@@ -49,9 +49,9 @@ program main
   REINIT     = .false. ! Let C evolve over the NITR, NAVG loop
 
   NITR = 1
-  NAVG = 50
+  NAVG = 1
 
-  lim = 1e2
+  lim = 5e2
 
   R     = 0._dp
   Cinit = 0._dp
@@ -90,6 +90,8 @@ program main
   write(*,*) SPC_NAMES(ind_OH), C(ind_OH), Cinit(ind_OH)
   write(*,*) SPC_NAMES(ind_SO4), C(ind_SO4), Cinit(ind_SO4)
   write(*,*) SPC_NAMES(ind_NO2), C(ind_NO2), Cinit(ind_NO2)
+  write(*,*) SPC_NAMES(ind_Br), C(ind_Br), Cinit(ind_Br)
+  write(*,*) SPC_NAMES(ind_BrO), C(ind_BrO), Cinit(ind_BrO)
   
   ! -------------------------------------------------------------------------- !
   ! 3. Run the compacted mechanism
@@ -105,6 +107,8 @@ program main
   write(*,*) SPC_NAMES(ind_OH), C(ind_OH), Cinit(ind_OH)
   write(*,*) SPC_NAMES(ind_SO4), C(ind_SO4), Cinit(ind_SO4)
   write(*,*) SPC_NAMES(ind_NO2), C(ind_NO2), Cinit(ind_NO2)
+  write(*,*) SPC_NAMES(ind_Br), C(ind_Br), Cinit(ind_Br)
+  write(*,*) SPC_NAMES(ind_BrO), C(ind_BrO), Cinit(ind_BrO)
   
   write(*,*) ''
   write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_O3))//' redux-full/full ', &

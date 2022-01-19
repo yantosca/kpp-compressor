@@ -31,8 +31,6 @@ MODULE gckpp_Parameters
   INTEGER, PARAMETER :: NSPEC = 278 
 ! NVAR - Number of Variable species
   INTEGER, PARAMETER :: NVAR = 274 
-! NFLUX - Number of Reaction Flux species
-  INTEGER, PARAMETER :: NFLUX = 1 
 ! NFAM - Number of Prod/Loss Families
   INTEGER, PARAMETER :: NFAM = 7 
 ! NVARACT - Number of Active species

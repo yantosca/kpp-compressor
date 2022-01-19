@@ -405,7 +405,8 @@ SUBROUTINE Rosenbrock(N,Y,Tstart,Tend, &
     IF (RCNTRL(8) > ZERO) THEN
        Redux_Threshold = RCNTRL(8)
     ELSEIF (RCNTRL(8) < ZERO) THEN
-       PRINT *, 'Auto-reduction Threshold < 0. Defaulting to ', Redux_Threshold
+       Autoreduce = .false.
+!       PRINT *, 'Auto-reduction Threshold < 0. Defaulting to ', Redux_Threshold
     ENDIF
 !~~~>  CALL Auto-reducing Rosenbrock method
     IF ( Autoreduce ) &
@@ -723,7 +724,7 @@ Stage: DO istage = 1, ros_S
 !~~~> Output: Error indicator
    INTEGER, INTENT(OUT) :: IERR
 ! ~~~~ Local variables
-   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N), Prod(N), Prd0(N), Loss(N), Los0(N)
+   REAL(kind=dp) :: Ynew(N), Fcn0(N), Fcn(N), Prod(N), Prd0(N), Loss(N), Los0(N), Yold(N), dummy(N)
    REAL(kind=dp) :: K(NVAR*ros_S), dFdT(N)
 #ifdef FULL_ALGEBRA    
    REAL(kind=dp) :: Jac0(N,N), Ghimj(N,N)
@@ -733,7 +734,7 @@ Stage: DO istage = 1, ros_S
    REAL(kind=dp) :: H, Hnew, HC, HG, Fac, Tau
    REAL(kind=dp) :: Err, Yerr(N), Yerrsub(NVAR)
    INTEGER :: Pivot(N), Direction, ioffset, j, istage
-   LOGICAL :: RejectLastH, RejectMoreH, Singular, Reduced
+   LOGICAL :: RejectLastH, RejectMoreH, Singular, Reduced, redoreduction
 !~~~>  Local parameters
    REAL(kind=dp), PARAMETER :: ZERO = 0.0_dp, ONE  = 1.0_dp
    REAL(kind=dp), PARAMETER :: DeltaMin = 1.0E-5_dp
@@ -747,7 +748,8 @@ Stage: DO istage = 1, ros_S
    DO_FUN  = .true.
    DO_JVS  = .true.
    Reduced = .false.
-
+   addSpcBack = .false.
+   
    T = Tstart
    RSTATUS(Nhexit) = ZERO
    H = MIN( MAX(ABS(Hmin),ABS(Hstart)) , ABS(Hmax) )
@@ -765,6 +767,8 @@ Stage: DO istage = 1, ros_S
 
 !~~~> Time loop begins below
 
+   Yold(1:N) = Y(1:N)
+acceptReduction: DO
 TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
        .OR. (Direction < 0).AND.((Tend-T)+Roundoff <= ZERO) )
 
@@ -790,7 +794,13 @@ TimeLoop: DO WHILE ( (Direction > 0).AND.((T-Tend)+Roundoff <= ZERO) &
       Los0 = Loss ! Save the initial Loss vector for 1st order approx
       CALL Reduce( threshold, Prd0, Los0*Y, IERR )
       reduced = .true.
-      if (IERR .eq. -99) return
+      if (IERR .eq. -98) then ! rNVAR is zero, do only 1st order approx and exit (success)
+         DO i=1,N
+            call autoreduce_1stOrder(i,Y(i),Prd0(i),Los0(i),Tstart,Tend)
+         ENDDO
+         IERR = 1 ! Success
+         return
+      endif
    endif
 !~~~>  Compute the function derivative with respect to T
    IF (.NOT.Autonomous) THEN
@@ -935,6 +945,43 @@ Stage: DO istage = 1, ros_S
       IF (.not. DO_FUN(i)) &
            call autoreduce_1stOrder(i,Y(i),Prd0(i),Los0(i),Tstart,Tend)
    ENDDO
+
+   ! Check mechanism behavior for missed 'fast' species
+   ! -- Make sure we can update the P/L for all species
+   DO_FUN  = .true.
+   ! -- recalculate P/L for end of time step
+   CALL FunSplitTemplate(T,Y,dummy,Prod,Loss)
+   DO i=1,N
+      ! Is this species removed? If so, test its final P/L
+      IF (.not.DO_SLV(i)) then
+         ! Currently tested agains 2x threshold
+         if (abs(Prod(i)).gt.2.*threshold.or.abs(Loss(i)*Y(i)).gt.2.*threshold) then
+            addSpcBack(i) = .true. ! Equivalent to keepSpcActive
+            redoreduction = .true. ! Force rerunning reduction and integration
+         endif
+      endif
+   ENDDO
+
+   IF (.not.redoreduction) then
+      ! No species added back
+      exit acceptReduction
+   ELSE
+      ! Reset the integration conditions      
+      Y(1:N) = Yold(1:N)
+      T = Tstart
+      H = MIN( MAX(ABS(Hmin),ABS(Hstart)) , ABS(Hmax) )
+      IF (ABS(H) <= 10.0_dp*Roundoff) H = DeltaMin
+      H = Direction*H
+      RejectLastH=.FALSE.
+      RejectMoreH=.FALSE. 
+      ! Reset the reduction parameters
+      DO_SLV  = .true.
+      DO_JVS  = .true.
+      Reduced = .false.
+      redoreduction  = .false.
+   END IF
+
+   END DO acceptReduction
 
 !~~~> Succesful exit
    IERR = 1  !~~~> The integration was successful
@@ -1917,25 +1964,38 @@ END SUBROUTINE cWAXPY
       SUBROUTINE REDUCE(threshold,P,L,IERR)
         
         USE gckpp_JacobianSP
+        USE gckpp_Monitor
 
         REAL(dp), INTENT(IN) :: P(NVAR), L(NVAR), threshold
         INTEGER              :: iSPC_MAP(NVAR)
         INTEGER              :: i, ii, iii, idx, nrmv, s
         INTEGER              :: IERR
+        LOGICAL              :: SKIP
 
         iSPC_MAP = 0
         
         NRMV = 0
         S    = 1
 
-        if (maxval(P) .lt. threshold .and. maxval(L) .lt. threshold) then
-           IERR = -99
+!        do i=1,NVAR
+!           write(*,*) 'P/L: ',trim(SPC_NAMES(i)), P(i), L(i)
+!        enddo
+!        read(*,*)
+
+        ! If all species will be deactivated, just to 1st order approx
+        if (maxval(P) .lt. threshold .and. maxval(L) .lt. threshold .and. .not. keepActive) then
+           IERR = -98
            return
         endif
 
         do i=1,NVAR
-           if (abs(L(i)).lt.threshold .and. abs(P(i)).lt.threshold) then
-!           if (abs(dcdt(i)).le.threshold) then
+           SKIP = .false. ! Assume not kept active.
+           if (keepactive .and. keepSpcActive(i)) SKIP = .true. ! Keep this species active
+           if (addSpcBack(i)) then
+              SKIP = .true.
+!              write(*,*) 'added ', spc_names(i), ' back'
+           endif
+           if (abs(L(i)).lt.threshold .and. abs(P(i)).lt.threshold .and. .not. SKIP) then ! per Shen et al., 2020
               NRMV=NRMV+1
               DO_SLV(i) = .false.
               DO_FUN(i) = .false.
@@ -1946,12 +2006,7 @@ END SUBROUTINE cWAXPY
            S=S+1
         ENDDO
         rNVAR    = NVAR-NRMV ! Number of active species in the reduced mechanism
-        if (real(rNVAR)/real(NVAR) .lt. 0.1) then
-           IERR = -99
-!           write(*,*) 'Reverting... -99'
-           return
-        endif
-        
+
         II  = 1
         III = 1
         idx = 0
@@ -1983,6 +2038,8 @@ END SUBROUTINE cWAXPY
         cLU_DIAG(1)       = 1 ! 1st index = 1
         cLU_CROW(rNVAR+1) = cNONZERO+1
         cLU_DIAG(rNVAR+1) = cLU_DIAG(rNVAR)+1
+
+!        write(*,*) 'Ran REDUCE() and removed ',NRMV,' species with threshold ',threshold
       END SUBROUTINE REDUCE
       
 END MODULE gckpp_Integrator
