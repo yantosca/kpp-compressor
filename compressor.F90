@@ -59,7 +59,8 @@ program main
 
 !  call set_quantssfc(dcdt,Cinit,R)
 !  call set_quants_uppertrop(dcdt,Cinit,R)
-  call set_quants_terminator(Cinit, R)
+!  call set_quants_terminator(Cinit, R)
+  call set_quants_terminator2(Cinit, R)
   where (Cinit .eq. 0.d0) Cinit = 1e-20
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
@@ -94,6 +95,8 @@ program main
   write(*,*) SPC_NAMES(ind_NO2), C(ind_NO2), Cinit(ind_NO2)
   write(*,*) SPC_NAMES(ind_Br), C(ind_Br), Cinit(ind_Br)
   write(*,*) SPC_NAMES(ind_BrO), C(ind_BrO), Cinit(ind_BrO)
+  write(*,*) SPC_NAMES(ind_Cl), C(ind_Cl), Cinit(ind_Cl)
+  write(*,*) SPC_NAMES(ind_ClO), C(ind_ClO), Cinit(ind_ClO)
   
   ! -------------------------------------------------------------------------- !
   ! 3. Run the compacted mechanism
@@ -111,6 +114,8 @@ program main
   write(*,*) SPC_NAMES(ind_NO2), C(ind_NO2), Cinit(ind_NO2)
   write(*,*) SPC_NAMES(ind_Br), C(ind_Br), Cinit(ind_Br)
   write(*,*) SPC_NAMES(ind_BrO), C(ind_BrO), Cinit(ind_BrO)
+  write(*,*) SPC_NAMES(ind_Cl), C(ind_Cl), Cinit(ind_Cl)
+  write(*,*) SPC_NAMES(ind_ClO), C(ind_ClO), Cinit(ind_ClO)
   
   write(*,*) ''
   write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_O3))//' redux-full/full ', &
@@ -121,6 +126,20 @@ program main
        100._dp*(Credux(ind_SO4)-Cfull(ind_SO4))/Cfull(ind_SO4), '%'
   write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_NO2))//' redux-full/full ', &
        100._dp*(Credux(ind_NO2)-Cfull(ind_NO2))/Cfull(ind_NO2), '%'
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_Br))//' redux-full/full ', &
+       100._dp*(Credux(ind_Br)-Cfull(ind_Br))/Cfull(ind_Br), '%'
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_BrO))//' redux-full/full ', &
+       100._dp*(Credux(ind_BrO)-Cfull(ind_BrO))/Cfull(ind_BrO), '%'
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_Cl))//' redux-full/full ', &
+       100._dp*(Credux(ind_Cl)-Cfull(ind_Cl))/Cfull(ind_Cl), '%'
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_ClO))//' redux-full/full ', &
+       100._dp*(Credux(ind_ClO)-Cfull(ind_ClO))/Cfull(ind_ClO), '%'
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_HCl))//' redux-full/full ', &
+       100._dp*(Credux(ind_HCl)-Cfull(ind_HCl))/Cfull(ind_HCl), '%'
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_BrNO3))//' redux-full/full ', &
+       100._dp*(Credux(ind_BrNO3)-Cfull(ind_BrNO3))/Cfull(ind_BrNO3), '%'
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_IONO2))//' redux-full/full ', &
+       100._dp*(Credux(ind_IONO2)-Cfull(ind_IONO2))/Cfull(ind_IONO2), '%'
   
   ! -------------------------------------------------------------------------- !
   ! 4. (optional) Calculate the error norm per Santillana et al. (2010) and
