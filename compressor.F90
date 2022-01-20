@@ -49,7 +49,7 @@ program main
   REINIT     = .false. ! Let C evolve over the NITR, NAVG loop
 
   NITR = 1
-  NAVG = 1
+  NAVG = 10
 
   lim = 5e2
 
@@ -57,8 +57,10 @@ program main
   Cinit = 0._dp
   cNONZERO = 0 ! Initialize number of nonzero elements in reduced mechanism
 
-  call set_quantssfc(dcdt,Cinit,R)
+!  call set_quantssfc(dcdt,Cinit,R)
 !  call set_quants_uppertrop(dcdt,Cinit,R)
+  call set_quants_terminator(Cinit, R)
+  where (Cinit .eq. 0.d0) Cinit = 1e-20
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
   ! e.g. compact the Jacobian
