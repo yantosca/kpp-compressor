@@ -49,7 +49,7 @@ program main
   REINIT     = .false. ! Let C evolve over the NITR, NAVG loop
 
   NITR = 1
-  NAVG = 10
+  NAVG = 1
 
   lim = 5e2
 
@@ -118,29 +118,30 @@ program main
   write(*,*) SPC_NAMES(ind_ClO), C(ind_ClO), Cinit(ind_ClO)
   
   write(*,*) ''
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_O3))//' redux-full/full ', &
-       100._dp*(Credux(ind_O3)-Cfull(ind_O3))/Cfull(ind_O3), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_OH))//' redux-full/full ', &
-       100._dp*(Credux(ind_OH)-Cfull(ind_OH))/Cfull(ind_OH), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_SO4))//' redux-full/full ', &
-       100._dp*(Credux(ind_SO4)-Cfull(ind_SO4))/Cfull(ind_SO4), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_NO2))//' redux-full/full ', &
-       100._dp*(Credux(ind_NO2)-Cfull(ind_NO2))/Cfull(ind_NO2), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_Br))//' redux-full/full ', &
-       100._dp*(Credux(ind_Br)-Cfull(ind_Br))/Cfull(ind_Br), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_BrO))//' redux-full/full ', &
-       100._dp*(Credux(ind_BrO)-Cfull(ind_BrO))/Cfull(ind_BrO), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_Cl))//' redux-full/full ', &
-       100._dp*(Credux(ind_Cl)-Cfull(ind_Cl))/Cfull(ind_Cl), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_ClO))//' redux-full/full ', &
-       100._dp*(Credux(ind_ClO)-Cfull(ind_ClO))/Cfull(ind_ClO), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_HCl))//' redux-full/full ', &
-       100._dp*(Credux(ind_HCl)-Cfull(ind_HCl))/Cfull(ind_HCl), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_BrNO3))//' redux-full/full ', &
-       100._dp*(Credux(ind_BrNO3)-Cfull(ind_BrNO3))/Cfull(ind_BrNO3), '%'
-  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_IONO2))//' redux-full/full ', &
-       100._dp*(Credux(ind_IONO2)-Cfull(ind_IONO2))/Cfull(ind_IONO2), '%'
-  
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_O3))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_O3)-Cfull(ind_O3))/Cfull(ind_O3), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_OH))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_OH)-Cfull(ind_OH))/Cfull(ind_OH), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_SO4))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_SO4)-Cfull(ind_SO4))/Cfull(ind_SO4), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_NO2))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_NO2)-Cfull(ind_NO2))/Cfull(ind_NO2), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_Br))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_Br)-Cfull(ind_Br))/Cfull(ind_Br), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_BrO))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_BrO)-Cfull(ind_BrO))/Cfull(ind_BrO), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_Cl))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_Cl)-Cfull(ind_Cl))/Cfull(ind_Cl), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_ClO))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_ClO)-Cfull(ind_ClO))/Cfull(ind_ClO), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_HCl))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_HCl)-Cfull(ind_HCl))/Cfull(ind_HCl), '%'
+!>>  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(ind_BrNO3))//' redux-full/full ', &
+!>>       100._dp*(Credux(ind_BrNO3)-Cfull(ind_BrNO3))/Cfull(ind_BrNO3), '%'
+  do i=1,NVAR
+  write(*,'(a,f6.2,a)') '  '//trim(SPC_NAMES(i))//' redux-full/full ', &
+       100._dp*(Credux(i)-Cfull(i))/Cfull(i), '%'
+  enddo
   ! -------------------------------------------------------------------------- !
   ! 4. (optional) Calculate the error norm per Santillana et al. (2010) and
   !    Shen et al. (2020)
@@ -273,6 +274,10 @@ CONTAINS
     comp_sumtime = 0.
     start        = 0.
     end          = 0.
+
+    keepActive = .true.
+    keepSpcActive(ind_HOCl) = .true.
+    keepSpcActive(ind_BrNO2) = .true.
 
     if (.not.reinit) C(1:NSPEC) = Cinit(1:NSPEC)
     ! --- INTEGRATION & TIMING LOOP

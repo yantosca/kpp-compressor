@@ -951,13 +951,19 @@ Stage: DO istage = 1, ros_S
    DO_FUN  = .true.
    ! -- recalculate P/L for end of time step
    CALL FunSplitTemplate(T,Y,dummy,Prod,Loss)
+!   write(*,*) 'Iteration'
    DO i=1,N
       ! Is this species removed? If so, test its final P/L
+!      if (i.eq.ind_HOCl) write(*,*) 'HOCl P: ', Prod(i), Prd0(i), (Prod(i)-Prd0(i))/threshold, (Prod(i)-Prd0(i))/Prd0(i)
+!      if (i.eq.ind_HOCl) write(*,*) 'HOCl L: ', Loss(i)*Y(i), Los0(i)*Y(i)
       IF (.not.DO_SLV(i)) then
          ! Currently tested agains 2x threshold
-         if (abs(Prod(i)).gt.2.*threshold.or.abs(Loss(i)*Y(i)).gt.2.*threshold) then
+         if (abs(Prod(i)).gt.1.*threshold.or.abs(Loss(i)*Y(i)).gt.1.*threshold) then
+         ! Alternative metric
+!         if ((Prod(i)-Prd0(i))/threshold.gt.0.2d0.or.(Loss(i)*Y(i)-Los0(i)*Yold(i))/threshold.gt.0.2d0) then
+!            write(*,*) 'added ', spc_names(i), ' back'
             addSpcBack(i) = .true. ! Equivalent to keepSpcActive
-            !redoreduction = .true. ! Force rerunning reduction and integration
+            redoreduction = .true. ! Force rerunning reduction and integration
          endif
       endif
    ENDDO
@@ -1993,7 +1999,7 @@ END SUBROUTINE cWAXPY
            if (keepactive .and. keepSpcActive(i)) SKIP = .true. ! Keep this species active
            if (addSpcBack(i)) then
               SKIP = .true.
-              write(*,*) 'added ', spc_names(i), ' back'
+!              write(*,*) 'added ', spc_names(i), ' back'
            endif
            if (abs(L(i)).lt.threshold .and. abs(P(i)).lt.threshold .and. .not. SKIP) then ! per Shen et al., 2020
               NRMV=NRMV+1
