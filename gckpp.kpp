@@ -5,7 +5,7 @@
 #MEX off
 #STOICMAT off
 
-#INCLUDE fullchem.eqn
+#INCLUDE v13.3.eqn
 
 #FAMILIES
 POx : O3; 

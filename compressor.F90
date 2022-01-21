@@ -60,7 +60,7 @@ program main
 !  call set_quantssfc(dcdt,Cinit,R)
 !  call set_quants_uppertrop(dcdt,Cinit,R)
 !  call set_quants_terminator(Cinit, R)
-  call set_quants_terminator2(Cinit, R)
+  call set_quants_terminator(Cinit, R)
   where (Cinit .eq. 0.d0) Cinit = 1e-20
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
