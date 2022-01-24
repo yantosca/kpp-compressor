@@ -60,7 +60,7 @@ program main
 !  call set_quantssfc(dcdt,Cinit,R)
 !  call set_quants_uppertrop(dcdt,Cinit,R)
 !  call set_quants_terminator(Cinit, R)
-  call set_quants_terminator(Cinit, R)
+  call set_quants_terminator6(Cinit, R)
   where (Cinit .eq. 0.d0) Cinit = 1e-20
   ! -------------------------------------------------------------------------- !
   ! 1. Reconstruct the sparse data for a reduced mechanism
@@ -276,8 +276,8 @@ CONTAINS
     end          = 0.
 
     keepActive = .true.
-    keepSpcActive(ind_HOCl) = .true.
-    keepSpcActive(ind_BrNO2) = .true.
+!    keepSpcActive(ind_HOCl) = .true.
+!    keepSpcActive(ind_BrNO2) = .true.
 
     if (.not.reinit) C(1:NSPEC) = Cinit(1:NSPEC)
     ! --- INTEGRATION & TIMING LOOP
